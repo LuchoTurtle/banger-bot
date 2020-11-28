@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+
+  mongo:
+    image: mongo
+    restart: always
+    networks:
+      - bangernet
+
+  bangerbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - mongo
+    networks:
+      - bangernet
+        
+networks:
+  bangernet:
+    driver: bridge
