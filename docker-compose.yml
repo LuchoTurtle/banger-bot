@@ -16,6 +16,8 @@ services:
       - mongo
     networks:
       - bangernet
+    environment:
+      - BOT_TOKEN=<paste your token here>
         
 networks:
   bangernet:
