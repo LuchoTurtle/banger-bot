@@ -12,12 +12,10 @@ from telegram.ext import (
     CallbackContext,
 )
 
-
 # Enable logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
-
 
 logger = logging.getLogger("BangerBot")
 
@@ -37,17 +35,17 @@ def help_command(update: Update, context: CallbackContext) -> None:
 def echo(update: Update, context: CallbackContext) -> None:
     """Echo the user message."""
 
-    #TODO Organize code, get more detailed metadata from URLs
+    # TODO Organize code, get more detailed metadata from URLs
     regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
     url = (re.findall(regex, update.message.text)[0])[0]
 
     preview = link_preview(url)
 
     message = (
-        update.message.from_user.full_name
-        + " providaded a link from "
-        + preview.link.netloc
-        + "\nWe getting there boys"
+            update.message.from_user.full_name
+            + " provided a link from "
+            + preview.link.netloc
+            + "\nWe getting there boys"
     )
 
     update.message.reply_text(message)
@@ -56,9 +54,7 @@ def echo(update: Update, context: CallbackContext) -> None:
 
 def main():
     """Start the bot."""
-    # Create the Updater and pass it your bot's token.
-    # Make sure to set use_context=True to use the new context based callbacks
-    # Post version 12 this will no longer be necessary
+    # Create the Updater
     updater = Updater(config("BOT_TOKEN"), use_context=True)
 
     # Get the dispatcher to register handlers
@@ -75,9 +71,7 @@ def main():
     # Start the Bot
     updater.start_polling()
 
-    # Run the bot until you press Ctrl-C or the process receives SIGINT,
-    # SIGTERM or SIGABRT. This should be used most of the time, since
-    # start_polling() is non-blocking and will stop the bot gracefully.
+    # Run the bot until you press Ctrl-C or the process receives SIGINT, SIGTERM or SIGABRT.
     updater.idle()
 
 
