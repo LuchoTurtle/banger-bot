@@ -154,3 +154,7 @@ dmypy.json
 .idea/
 
 .vscode/
+
+src/client_secrets.json
+
+src/token.json

@@ -12,6 +12,9 @@ from telegram.ext import (
     CallbackContext,
 )
 
+from gdrive import getCreds, fileHandler
+
+
 # Enable logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -19,6 +22,7 @@ logging.basicConfig(
 
 logger = logging.getLogger("BangerBot")
 
+## Definir google drive token -> fazer upload para lá. O Bot pega nos links e faz o upload tudo automaticamente. Depois até podemos dizer quanto espaço falta ou não
 
 # Define a few command handlers. These usually take the two arguments update and
 # context. Error handlers also receive the raised TelegramError object in error.
@@ -53,6 +57,9 @@ def echo(update: Update, context: CallbackContext) -> None:
 
 
 def main():
+    creds = getCreds()
+    fileHandler(creds)
+
     """Start the bot."""
     # Create the Updater
     updater = Updater(config("BOT_TOKEN"), use_context=True)
