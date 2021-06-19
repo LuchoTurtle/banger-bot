@@ -5,10 +5,14 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 
-# If modifying these scopes, delete the file token.json.
-SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly']
+from googleapiclient.http import MediaFileUpload
+import os
 
-def getCreds():
+# If modifying these scopes, delete the file token.json.
+SCOPES = ['https://www.googleapis.com/auth/drive']
+
+
+def get_creds():
     """Shows basic usage of the Drive v3 API.
     Prints the names and ids of the first 10 files the user has access to.
     """
@@ -32,17 +36,35 @@ def getCreds():
 
     return creds
 
-def fileHandler(creds):
-    service = build('drive', 'v3', credentials=creds)
 
-    # Call the Drive v3 API
-    results = service.files().list(
-        pageSize=10, fields="nextPageToken, files(id, name)").execute()
-    items = results.get('files', [])
+def file_handler(update, context):
+    """handles the uploaded files"""
 
-    if not items:
-        print('No files found.')
-    else:
-        print('Files:')
-        for item in items:
-            print(u'{0} ({1})'.format(item['name'], item['id']))
+    # Get file info
+    file = context.bot.getFile(update.message.audio.file_id)
+    file.download(update.message.audio.title)
+
+    doc = update.message.audio
+
+    # Get driver service to upload the file
+    service = build('drive', 'v3', credentials=get_creds(), cache_discovery=False)
+    filename = doc.title
+
+    metadata = {'name': filename}
+    media = MediaFileUpload(filename, chunksize=1024 * 1024, mimetype=doc.mime_type, resumable=True)
+
+    # Upload file
+    request = service.files().create(body=metadata,
+                                     media_body=media)
+
+    response = None
+    while response is None:
+        status, response = request.next_chunk()
+        if status:
+            print("Uploaded %d%%." % int(status.progress() * 100))
+
+    # Send confirmation to bot user
+    context.bot.send_message(chat_id=update.effective_chat.id, text="✅ File uploaded!")
+
+    # Delete uplodaded file locally
+    #os.remove('./' + filename)

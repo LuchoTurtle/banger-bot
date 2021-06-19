@@ -12,7 +12,7 @@ from telegram.ext import (
     CallbackContext,
 )
 
-from gdrive import getCreds, fileHandler
+from gdrive import get_creds, file_handler
 
 
 # Enable logging
@@ -57,9 +57,7 @@ def echo(update: Update, context: CallbackContext) -> None:
 
 
 def main():
-    creds = getCreds()
-    fileHandler(creds)
-
+    get_creds()
     """Start the bot."""
     # Create the Updater
     updater = Updater(config("BOT_TOKEN"), use_context=True)
@@ -69,6 +67,7 @@ def main():
 
     # on different commands - answer in Telegram
     dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(MessageHandler(Filters.audio, file_handler))
     dispatcher.add_handler(CommandHandler("help", help_command))
 
     # on noncommand with message in url
