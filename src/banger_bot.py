@@ -25,6 +25,7 @@ logger = logging.getLogger("BangerBot")
 ## Definir google drive token -> fazer upload para lá. O Bot pega nos links e faz o upload tudo automaticamente. Depois até podemos dizer quanto espaço falta ou não
 
 def start(update: Update, context: CallbackContext) -> None:
+    logger.log(level=logging.INFO, msg="Bot initiated with /start command.")
     update.message.reply_text(
 """*Hi! Welcome Banger Bot!* 👋\n
 The bot is still under development but it is mainly intended for you and your friends to share music on a group chat and automatically upload it to a Google Drive folder you set up. \n
@@ -33,6 +34,7 @@ Enjoy your music with your friends! 🎉
 
 
 def help_command(update: Update, context: CallbackContext) -> None:
+    logger.log(level=logging.INFO, msg="Printed /help command.")
     update.message.reply_text("""
 *We're here to help!* 😀\n
 For the bot to properly work, you need a _Google Drive project set up and authorize this bot on startup to edit it_. 
@@ -66,28 +68,24 @@ def echo(update: Update, context: CallbackContext) -> None:
 
 
 def main():
-    get_creds()
     """Start the bot."""
+    get_creds()
 
     # TODO verify chat ID only for us
-    # Create the Updater
-    updater = Updater(config("BOT_TOKEN"), use_context=True)
 
-    # Get the dispatcher to register handlers
+    # Create the Updater and get dispatcher to register handlers
+    updater = Updater(config("BOT_TOKEN"), use_context=True)
     dispatcher = updater.dispatcher
 
-    # on different commands - answer in Telegram
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("help", help_command))
-    dispatcher.add_handler(MessageHandler(Filters.audio, file_handler))
 
-    # on noncommand with message in url
+    dispatcher.add_handler(MessageHandler(Filters.audio, file_handler))
     # TODO create filter for known providers : Spotify, Apple Music, SoundCloud, etc
     dispatcher.add_handler(MessageHandler(Filters.entity("url"), echo))
 
     # Start the Bot
     updater.start_polling()
-
     # Run the bot until you press Ctrl-C or the process receives SIGINT, SIGTERM or SIGABRT.
     updater.idle()
 
