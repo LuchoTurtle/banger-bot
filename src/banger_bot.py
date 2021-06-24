@@ -28,7 +28,11 @@ logger = logging.getLogger("BangerBot")
 # context. Error handlers also receive the raised TelegramError object in error.
 def start(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
-    update.message.reply_text("Hi! This is Banger Bot!")
+    update.message.reply_text(
+"""Hi! Welcome Banger Bot! 👋\n
+The bot is still under development but it is mainly intended for you and your friends to share music on a group chat and automatically upload it to a Google Drive folder you set up. \n
+Enjoy your music with your friends!🎉 """
+    )
 
 
 def help_command(update: Update, context: CallbackContext) -> None:
