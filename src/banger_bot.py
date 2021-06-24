@@ -3,13 +3,13 @@ import re
 
 from decouple import config
 from linkpreview import link_preview
-from telegram import Update
+from telegram import Update, ParseMode, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Updater,
     CommandHandler,
     MessageHandler,
     Filters,
-    CallbackContext,
+    CallbackContext, CallbackQueryHandler,
 )
 
 from gdrive import get_creds, file_handler
@@ -24,20 +24,25 @@ logger = logging.getLogger("BangerBot")
 
 ## Definir google drive token -> fazer upload para lá. O Bot pega nos links e faz o upload tudo automaticamente. Depois até podemos dizer quanto espaço falta ou não
 
-# Define a few command handlers. These usually take the two arguments update and
-# context. Error handlers also receive the raised TelegramError object in error.
 def start(update: Update, context: CallbackContext) -> None:
-    """Send a message when the command /start is issued."""
     update.message.reply_text(
-"""Hi! Welcome Banger Bot! 👋\n
+"""*Hi! Welcome Banger Bot!* 👋\n
 The bot is still under development but it is mainly intended for you and your friends to share music on a group chat and automatically upload it to a Google Drive folder you set up. \n
-Enjoy your music with your friends!🎉 """
-    )
+Enjoy your music with your friends! 🎉 
+    """, parse_mode=ParseMode.MARKDOWN)
 
 
 def help_command(update: Update, context: CallbackContext) -> None:
-    """Send a message when the command /help is issued."""
-    update.message.reply_text("Help!")
+    update.message.reply_text("""
+*We're here to help!* 😀\n
+For the bot to properly work, you need a _Google Drive project set up and authorize this bot on startup to edit it_. 
+From there on, the bot will listen to relevant URLs and take care of downloading and uploading your music to Google Drive. \n
+Do you want some guidance setting everything up step-by-step? Click the button below to check our Github repository 
+and find all the info needed there! 😊
+""", reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton(text='Github Page', url='https://github.com/LuchoTurtle/banger-bot')],
+        ]),
+     parse_mode=ParseMode.MARKDOWN)
 
 
 def echo(update: Update, context: CallbackContext) -> None:
@@ -73,8 +78,8 @@ def main():
 
     # on different commands - answer in Telegram
     dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(MessageHandler(Filters.audio, file_handler))
     dispatcher.add_handler(CommandHandler("help", help_command))
+    dispatcher.add_handler(MessageHandler(Filters.audio, file_handler))
 
     # on noncommand with message in url
     # TODO create filter for known providers : Spotify, Apple Music, SoundCloud, etc
