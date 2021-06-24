@@ -3,7 +3,7 @@ import re
 
 from decouple import config
 from linkpreview import link_preview
-from telegram import Update, Message
+from telegram import Update
 from telegram.ext import (
     Updater,
     CommandHandler,
@@ -59,6 +59,8 @@ def echo(update: Update, context: CallbackContext) -> None:
 def main():
     get_creds()
     """Start the bot."""
+
+    # TODO verify chat ID only for us
     # Create the Updater
     updater = Updater(config("BOT_TOKEN"), use_context=True)
 
