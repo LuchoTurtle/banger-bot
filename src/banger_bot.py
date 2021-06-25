@@ -1,6 +1,7 @@
 import logging
 import re
 import youtube_dl
+import magic
 
 from decouple import config
 from telegram import Update, ParseMode, InlineKeyboardButton, InlineKeyboardMarkup
@@ -12,7 +13,7 @@ from telegram.ext import (
     CallbackContext
 )
 
-from gdrive import get_creds, file_handler
+from gdrive import get_creds, file_handler, upload_to_drive
 
 # Enable logging
 logging.basicConfig(
@@ -47,16 +48,27 @@ and find all the info needed there! 😊
                               parse_mode=ParseMode.MARKDOWN)
 
 
-def youtube_callback(url) -> None:
+def youtube_callback(update: Update, context: CallbackContext, url: str) -> None:
     ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': '../files/%(title)s.%(ext)s'
     }
     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url])
+        # Download and get file info
+        info = ydl.extract_info(url, download=True)
 
-    # TODO upload to gdrive
+        filepath = ydl.prepare_filename(info)
+        title = info['title']
+        mime = magic.Magic(mime=True)
+        mimetype = mime.from_file(filepath)
 
+        # Upload to GDrive
+        upload_to_drive(filepath, title, mimetype)
+
+        # Send confirmation message
+        context.bot.send_message(chat_id=update.effective_chat.id,
+                                 text="Your song *"+ title + "* has been uploaded ✅",
+                                 parse_mode=ParseMode.MARKDOWN)
 
 def echo(update: Update, context: CallbackContext) -> None:
     # TODO Organize code, get more detailed metadata from URLs
@@ -64,7 +76,7 @@ def echo(update: Update, context: CallbackContext) -> None:
     url = (re.findall(regex, update.message.text)[0])[0]
 
     if 'youtube' in url:
-        youtube_callback(url)
+        youtube_callback(update, context, url)
 
     else:
         update.message.reply_text("We are yet to support URLs from this place. 😕", parse_mode=ParseMode.MARKDOWN)
