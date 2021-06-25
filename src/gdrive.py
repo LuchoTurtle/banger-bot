@@ -37,21 +37,12 @@ def get_creds():
     return creds
 
 
-def file_handler(update, context):
-    """handles the uploaded files"""
-
-    # Get file info
-    file = context.bot.getFile(update.message.audio.file_id)
-    file.download(update.message.audio.title)
-
-    doc = update.message.audio
-
+def upload_to_drive(file_location, filename, mime_type):
     # Get driver service to upload the file
     service = build('drive', 'v3', credentials=get_creds(), cache_discovery=False)
-    filename = doc.title
 
     metadata = {'name': filename}
-    media = MediaFileUpload(filename, chunksize=1024 * 1024, mimetype=doc.mime_type, resumable=True)
+    media = MediaFileUpload(file_location, chunksize=1024 * 1024, mimetype=mime_type, resumable=True)
 
     # Upload file
     request = service.files().create(body=metadata,
@@ -63,8 +54,22 @@ def file_handler(update, context):
         if status:
             print("Uploaded %d%%." % int(status.progress() * 100))
 
+
+def file_handler(update, context):
+    """handles the uploaded files"""
+
+    filename = update.message.audio.title
+    file_location = '../files/' + filename
+    mime_type = update.message.audio.mime_type
+
+    # Get file info
+    file = context.bot.getFile(update.message.audio.file_id)
+    file.download(file_location)
+
+    upload_to_drive(file_location, filename, mime_type)
+
     # Send confirmation to bot user
     context.bot.send_message(chat_id=update.effective_chat.id, text="✅ File uploaded!")
 
     # Delete uplodaded file locally
-    #os.remove('./' + filename)
+    # os.remove('./' + filename)

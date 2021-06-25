@@ -1,19 +1,18 @@
 import logging
 import re
+import youtube_dl
 
 from decouple import config
-from linkpreview import link_preview
 from telegram import Update, ParseMode, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Updater,
     CommandHandler,
     MessageHandler,
     Filters,
-    CallbackContext, CallbackQueryHandler,
+    CallbackContext
 )
 
 from gdrive import get_creds, file_handler
-
 
 # Enable logging
 logging.basicConfig(
@@ -22,12 +21,13 @@ logging.basicConfig(
 
 logger = logging.getLogger("BangerBot")
 
+
 ## Definir google drive token -> fazer upload para lá. O Bot pega nos links e faz o upload tudo automaticamente. Depois até podemos dizer quanto espaço falta ou não
 
 def start(update: Update, context: CallbackContext) -> None:
     logger.log(level=logging.INFO, msg="Bot initiated with /start command.")
     update.message.reply_text(
-"""*Hi! Welcome Banger Bot!* 👋\n
+        """*Hi! Welcome Banger Bot!* 👋\n
 The bot is still under development but it is mainly intended for you and your friends to share music on a group chat and automatically upload it to a Google Drive folder you set up. \n
 Enjoy your music with your friends! 🎉 
     """, parse_mode=ParseMode.MARKDOWN)
@@ -42,29 +42,32 @@ From there on, the bot will listen to relevant URLs and take care of downloading
 Do you want some guidance setting everything up step-by-step? Click the button below to check our Github repository 
 and find all the info needed there! 😊
 """, reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton(text='Github Page', url='https://github.com/LuchoTurtle/banger-bot')],
-        ]),
-     parse_mode=ParseMode.MARKDOWN)
+        [InlineKeyboardButton(text='Github Page', url='https://github.com/LuchoTurtle/banger-bot')],
+    ]),
+                              parse_mode=ParseMode.MARKDOWN)
+
+
+def youtube_callback(url) -> None:
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'outtmpl': '../files/%(title)s.%(ext)s'
+    }
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([url])
+
+    # TODO upload to gdrive
 
 
 def echo(update: Update, context: CallbackContext) -> None:
-    """Echo the user message."""
-
     # TODO Organize code, get more detailed metadata from URLs
     regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
     url = (re.findall(regex, update.message.text)[0])[0]
 
-    preview = link_preview(url)
+    if 'youtube' in url:
+        youtube_callback(url)
 
-    message = (
-            update.message.from_user.full_name
-            + " provided a link from "
-            + preview.link.netloc
-            + "\nWe getting there boys"
-    )
-
-    update.message.reply_text(message)
-    logger.log(level=logging.INFO, msg=message)
+    else:
+        update.message.reply_text("We are yet to support URLs from this place. 😕", parse_mode=ParseMode.MARKDOWN)
 
 
 def main():
