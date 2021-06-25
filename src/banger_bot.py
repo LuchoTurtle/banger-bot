@@ -1,7 +1,5 @@
 import logging
 import re
-import youtube_dl
-import magic
 
 from decouple import config
 from telegram import Update, ParseMode, InlineKeyboardButton, InlineKeyboardMarkup
@@ -12,18 +10,15 @@ from telegram.ext import (
     Filters,
     CallbackContext
 )
-
-from gdrive import get_creds, file_handler, upload_to_drive
+from src.gdrive import get_creds, file_handler
+from src.youtube import youtube_callback
 
 # Enable logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
-
 logger = logging.getLogger("BangerBot")
 
-
-## Definir google drive token -> fazer upload para lá. O Bot pega nos links e faz o upload tudo automaticamente. Depois até podemos dizer quanto espaço falta ou não
 
 def start(update: Update, context: CallbackContext) -> None:
     logger.log(level=logging.INFO, msg="Bot initiated with /start command.")
@@ -48,36 +43,16 @@ and find all the info needed there! 😊
                               parse_mode=ParseMode.MARKDOWN)
 
 
-def youtube_callback(update: Update, context: CallbackContext, url: str) -> None:
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'outtmpl': '../files/%(title)s.%(ext)s'
-    }
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        # Download and get file info
-        info = ydl.extract_info(url, download=True)
-
-        filepath = ydl.prepare_filename(info)
-        title = info['title']
-        mime = magic.Magic(mime=True)
-        mimetype = mime.from_file(filepath)
-
-        # Upload to GDrive
-        upload_to_drive(filepath, title, mimetype)
-
-        # Send confirmation message
-        context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text="Your song *"+ title + "* has been uploaded ✅",
-                                 parse_mode=ParseMode.MARKDOWN)
-
-def echo(update: Update, context: CallbackContext) -> None:
+def url_handler(update: Update, context: CallbackContext) -> None:
     # TODO Organize code, get more detailed metadata from URLs
-    regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
-    url = (re.findall(regex, update.message.text)[0])[0]
+    # TODO create filter for known providers : Spotify, Apple Music, SoundCloud, etc
+    url_regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
+    url = (re.findall(url_regex, update.message.text)[0])[0]
 
-    if 'youtube' in url:
+    youtube_pattern = re.compile(
+        "(?:https?:\/\/)?(?:youtu\.be\/|(?:www\.|m\.)?youtube\.com\/?)")
+    if bool(youtube_pattern.search(url)):
         youtube_callback(update, context, url)
-
     else:
         update.message.reply_text("We are yet to support URLs from this place. 😕", parse_mode=ParseMode.MARKDOWN)
 
@@ -96,8 +71,7 @@ def main():
     dispatcher.add_handler(CommandHandler("help", help_command))
 
     dispatcher.add_handler(MessageHandler(Filters.audio, file_handler))
-    # TODO create filter for known providers : Spotify, Apple Music, SoundCloud, etc
-    dispatcher.add_handler(MessageHandler(Filters.entity("url"), echo))
+    dispatcher.add_handler(MessageHandler(Filters.entity("url"), url_handler))
 
     # Start the Bot
     updater.start_polling()

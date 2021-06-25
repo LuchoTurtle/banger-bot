@@ -38,21 +38,25 @@ def get_creds():
 
 
 def upload_to_drive(file_location, filename, mime_type):
-    # Get driver service to upload the file
-    service = build('drive', 'v3', credentials=get_creds(), cache_discovery=False)
+    try:
+        # Get driver service to upload the file
+        service = build('drive', 'v3', credentials=get_creds(), cache_discovery=False)
 
-    metadata = {'name': filename}
-    media = MediaFileUpload(file_location, chunksize=1024 * 1024, mimetype=mime_type, resumable=True)
+        metadata = {'name': filename}
+        media = MediaFileUpload(file_location, chunksize=1024 * 1024, mimetype=mime_type, resumable=True)
 
-    # Upload file
-    request = service.files().create(body=metadata,
-                                     media_body=media)
+        # Upload file
+        request = service.files().create(body=metadata,
+                                         media_body=media)
 
-    response = None
-    while response is None:
-        status, response = request.next_chunk()
-        if status:
-            print("Uploaded %d%%." % int(status.progress() * 100))
+        response = None
+        while response is None:
+            status, response = request.next_chunk()
+            if status:
+                print("Uploaded %d%%." % int(status.progress() * 100))
+
+    except Exception as e:
+        raise Exception("Problem uploading file to Google Drive.")
 
 
 def file_handler(update, context):
