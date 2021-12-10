@@ -17,7 +17,7 @@ services:
     networks:
       - bangernet
     environment:
-      - BOT_TOKEN=<paste your token here>
+      - BOT_TOKEN=1425299125:AAFh6htrQ8UysssX66UyQq87oanCqNPF2FA
         
 networks:
   bangernet:

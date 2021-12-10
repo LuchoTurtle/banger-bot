@@ -59,21 +59,19 @@ def upload_to_drive(file_location, filename, mime_type):
         raise Exception("Problem uploading file to Google Drive.")
 
 
-def file_handler(update, context):
+def file_handler(title, file_id, mime_type, chat_id, context):
     """handles the uploaded files"""
 
-    filename = update.message.audio.title
-    file_location = '../files/' + filename
-    mime_type = update.message.audio.mime_type
+    file_location = '../files/' + title
 
     # Get file info
-    file = context.bot.getFile(update.message.audio.file_id)
+    file = context.bot.getFile(file_id)
     file.download(file_location)
 
-    upload_to_drive(file_location, filename, mime_type)
+    upload_to_drive(file_location, title, mime_type)
 
     # Send confirmation to bot user
-    context.bot.send_message(chat_id=update.effective_chat.id, text="✅ File uploaded!")
+    context.bot.send_message(chat_id=chat_id, text="✅ File uploaded!")
 
     # Delete uplodaded file locally
     # os.remove('./' + filename)

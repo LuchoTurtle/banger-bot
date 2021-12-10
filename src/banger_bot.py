@@ -1,5 +1,8 @@
 import logging
 import re
+import asyncio
+from shazamio import Shazam, serialize_track
+import json
 
 from decouple import config
 from telegram import Update, ParseMode, InlineKeyboardButton, InlineKeyboardMarkup
@@ -7,6 +10,7 @@ from telegram.ext import (
     Updater,
     CommandHandler,
     MessageHandler,
+    CallbackQueryHandler,
     Filters,
     CallbackContext
 )
@@ -57,6 +61,77 @@ def url_handler(update: Update, context: CallbackContext) -> None:
         update.message.reply_text("We are yet to support URLs from this place. 😕", parse_mode=ParseMode.MARKDOWN)
 
 
+# TODO We need to find a way to automatically instapp ffmpeg and add it to path variable before running, it's needed
+#  for Shazam
+async def shazam(title: str, file_id, context: CallbackContext):
+    file_location = '../files/' + title
+
+    file = context.bot.getFile(file_id)
+    file.download(file_location)
+
+    print(file_location)
+
+    shazam_obj = Shazam()
+    track = await shazam_obj.recognize_song(file_location)
+
+    return track.get('track').get('title')
+
+
+def audio_file_handler(update: Update, context: CallbackContext) -> None:
+    """Sends a message with three inline buttons attached."""
+
+    shazam_obj = {
+        "action": "shazam",
+        "file_title": update.message.audio.title,
+        "file_id": update.message.audio.file_id,
+        "mime_type": update.message.audio.mime_type,
+        "chat_id": update.effective_chat.id
+    }
+
+    direct_obj = {
+        "action": "direct",
+        "file_title": update.message.audio.title,
+        "file_id": update.message.audio.file_id,
+        "mime_type": update.message.audio.mime_type,
+        "chat_id": update.effective_chat.id
+    }
+
+    keyboard = [
+        [
+            InlineKeyboardButton("Shazam",
+                                 callback_data=shazam_obj),
+            InlineKeyboardButton("Direct upload",
+                                 callback_data=direct_obj),
+        ]
+    ]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    update.message.reply_text('Please choose one of the following options:', reply_markup=reply_markup)
+
+
+def audio_file_handler_button(update: Update, context: CallbackContext) -> None:
+    """Parses the CallbackQuery and updates the message text."""
+
+    query = update.callback_query
+
+    # CallbackQueries need to be answered, even if no notification to the user is needed
+    # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
+    query.answer()
+
+    answer = query.data
+
+    if answer.get('action') is 'shazam':
+        song_title = asyncio.run(
+            shazam(answer.get('file_title') + '.mp3', answer.get('file_id'), context)
+        )
+
+        query.edit_message_text(text=f"We found a song! Here's the title: {song_title}")
+    else:
+        file_handler(answer.get('file_title'), answer.get('file_id'), answer.get('mime_type'), answer.get('chat_id'), context)
+        query.edit_message_text(text=f"Song uploaded!")
+
+
 def main():
     """Start the bot."""
     get_creds()
@@ -64,13 +139,15 @@ def main():
     # TODO verify chat ID only for us
 
     # Create the Updater and get dispatcher to register handlers
-    updater = Updater(config("BOT_TOKEN"), use_context=True)
+    updater = Updater(config("BOT_TOKEN"), use_context=True, arbitrary_callback_data=True)
     dispatcher = updater.dispatcher
 
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("help", help_command))
 
-    dispatcher.add_handler(MessageHandler(Filters.audio, file_handler))
+    dispatcher.add_handler(MessageHandler(Filters.audio, audio_file_handler))
+    updater.dispatcher.add_handler(CallbackQueryHandler(audio_file_handler_button))
+
     dispatcher.add_handler(MessageHandler(Filters.entity("url"), url_handler))
 
     # Start the Bot
