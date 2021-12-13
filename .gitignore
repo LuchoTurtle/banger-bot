@@ -155,6 +155,4 @@ dmypy.json
 
 .vscode/
 
-src/client_secrets.json
-
-src/token.json
+auth/*

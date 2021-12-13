@@ -1,8 +1,6 @@
 import logging
 import re
 import asyncio
-from shazamio import Shazam, serialize_track
-import json
 
 from decouple import config
 from telegram import Update, ParseMode, InlineKeyboardButton, InlineKeyboardMarkup
@@ -14,8 +12,10 @@ from telegram.ext import (
     Filters,
     CallbackContext
 )
-from src.gdrive import get_creds, file_handler
+from src.gdrive import get_creds, upload_to_drive
 from src.youtube import youtube_callback
+
+from src.shazam import shazam
 
 # Enable logging
 logging.basicConfig(
@@ -59,22 +59,6 @@ def url_handler(update: Update, context: CallbackContext) -> None:
         youtube_callback(update, context, url)
     else:
         update.message.reply_text("We are yet to support URLs from this place. 😕", parse_mode=ParseMode.MARKDOWN)
-
-
-# TODO We need to find a way to automatically instapp ffmpeg and add it to path variable before running, it's needed
-#  for Shazam
-async def shazam(title: str, file_id, context: CallbackContext):
-    file_location = '../files/' + title
-
-    file = context.bot.getFile(file_id)
-    file.download(file_location)
-
-    print(file_location)
-
-    shazam_obj = Shazam()
-    track = await shazam_obj.recognize_song(file_location)
-
-    return track.get('track').get('title')
 
 
 def audio_file_handler(update: Update, context: CallbackContext) -> None:
@@ -122,21 +106,25 @@ def audio_file_handler_button(update: Update, context: CallbackContext) -> None:
     answer = query.data
 
     if answer.get('action') is 'shazam':
+        query.edit_message_text("Please wait while we detect the song ⌛")
+
         song_title = asyncio.run(
-            shazam(answer.get('file_title') + '.mp3', answer.get('file_id'), context)
+            shazam(answer.get('file_title'), answer.get('file_id'), context)
         )
 
         query.edit_message_text(text=f"We found a song! Here's the title: {song_title}")
     else:
-        file_handler(answer.get('file_title'), answer.get('file_id'), answer.get('mime_type'), answer.get('chat_id'), context)
+        query.edit_message_text("Please wait while we upload the song ⌛")
+
+        file_location = '../files/' + answer.get('file_title')
+        upload_to_drive(answer.get('file_id'), file_location, answer.get('file_title'), answer.get('mime_type'), context)
+
         query.edit_message_text(text=f"Song uploaded!")
 
 
 def main():
     """Start the bot."""
     get_creds()
-
-    # TODO verify chat ID only for us
 
     # Create the Updater and get dispatcher to register handlers
     updater = Updater(config("BOT_TOKEN"), use_context=True, arbitrary_callback_data=True)
@@ -150,9 +138,7 @@ def main():
 
     dispatcher.add_handler(MessageHandler(Filters.entity("url"), url_handler))
 
-    # Start the Bot
     updater.start_polling()
-    # Run the bot until you press Ctrl-C or the process receives SIGINT, SIGTERM or SIGABRT.
     updater.idle()
 
 
