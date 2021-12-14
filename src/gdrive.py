@@ -65,5 +65,8 @@ def upload_to_drive(file_id, file_location, title, mime_type, context):
     except Exception as e:
         raise Exception("Problem uploading file to Google Drive.")
 
+    finally:
+        media.stream().close()
+
     # Delete uploaded file locally
-    # os.remove('./' + filename)
+    os.remove(ROOT_DIR + '/files/' + title)
