@@ -12,6 +12,8 @@ from telegram.ext import (
     Filters,
     CallbackContext
 )
+
+from src.models import File, Action
 from src.gdrive import get_creds, upload_to_drive
 from src.youtube import youtube_callback
 
@@ -62,64 +64,72 @@ def url_handler(update: Update, context: CallbackContext) -> None:
 
 
 def audio_file_handler(update: Update, context: CallbackContext) -> None:
-    """Sends a message with three inline buttons attached."""
+    """
+    Function that is called whenever an audio file is sent to the chat. It creates an inline keyboard with two possible options.
+    @param update: Update object of message.
+    @param context: Callback Context object.
+    @return:
+    """
+    shazam_obj: File = File(Action.SHAZAM,
+                            update.message.audio.title,
+                            update.message.audio.file_id,
+                            update.message.audio.mime_type,
+                            update.effective_chat.id)
 
-    shazam_obj = {
-        "action": "shazam",
-        "file_title": update.message.audio.title,
-        "file_id": update.message.audio.file_id,
-        "mime_type": update.message.audio.mime_type,
-        "chat_id": update.effective_chat.id
-    }
-
-    direct_obj = {
-        "action": "direct",
-        "file_title": update.message.audio.title,
-        "file_id": update.message.audio.file_id,
-        "mime_type": update.message.audio.mime_type,
-        "chat_id": update.effective_chat.id
-    }
+    direct_obj: File = File(Action.GDRIVE_UPLOAD,
+                            update.message.audio.title,
+                            update.message.audio.file_id,
+                            update.message.audio.mime_type,
+                            update.effective_chat.id)
 
     keyboard = [
         [
-            InlineKeyboardButton("Shazam",
+            InlineKeyboardButton("Shazam ⚡",
                                  callback_data=shazam_obj),
-            InlineKeyboardButton("Direct upload",
+            InlineKeyboardButton("Drive Upload ⬆",
                                  callback_data=direct_obj),
         ]
     ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-
-    update.message.reply_text('Please choose one of the following options:', reply_markup=reply_markup)
+    update.message.reply_text('What do you want to do with this audio file?', reply_markup=reply_markup)
 
 
 def audio_file_handler_button(update: Update, context: CallbackContext) -> None:
-    """Parses the CallbackQuery and updates the message text."""
+    """
+    Audio file inline button callback function. This function processes the action chosen.
+    @param update: Update object of message.
+    @param context: Callback Context object.
+    @return:
+    """
 
     query = update.callback_query
 
     # CallbackQueries need to be answered, even if no notification to the user is needed
-    # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
     query.answer()
 
-    answer = query.data
+    answer_file: File = query.data
 
-    if answer.get('action') is 'shazam':
+    # Check if the user wants to Shazam or directly upload the file to the Google Drive account
+    if answer_file.action is Action.SHAZAM:
         query.edit_message_text("Please wait while we detect the song ⌛")
 
         song_title = asyncio.run(
-            shazam(answer.get('file_title'), answer.get('file_id'), context)
+            shazam(answer_file.file_title, answer_file.file_id, context)
         )
 
         query.edit_message_text(text=f"We found a song! Here's the title: {song_title}")
-    else:
+
+    elif answer_file.action is Action.GDRIVE_UPLOAD:
         query.edit_message_text("Please wait while we upload the song ⌛")
 
-        file_location = '../files/' + answer.get('file_title')
-        upload_to_drive(answer.get('file_id'), file_location, answer.get('file_title'), answer.get('mime_type'), context)
+        file_location = '../files/' + answer_file.file_title
+        upload_to_drive(answer_file.file_id, file_location, answer_file.file_title, answer_file.mime_type, context)
 
         query.edit_message_text(text=f"Song uploaded!")
+
+    else:
+        query.edit_message_text("That action is not permitted 🙁")
 
 
 def main():
@@ -130,6 +140,7 @@ def main():
     updater = Updater(config("BOT_TOKEN"), use_context=True, arbitrary_callback_data=True)
     dispatcher = updater.dispatcher
 
+    # Handlers
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("help", help_command))
 
