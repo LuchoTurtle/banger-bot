@@ -1,13 +1,13 @@
 from __future__ import print_function
 
-import os.path
 import os
 
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from definitions import ROOT_DIR
+
+from definitions import AUTH_DIR
 
 from googleapiclient.http import MediaFileUpload
 
@@ -23,34 +23,30 @@ def get_creds():
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists('../auth/token.json'):
-        creds = Credentials.from_authorized_user_file('../auth/token.json', SCOPES)
+    if os.path.exists(AUTH_DIR + 'token.json'):
+        creds = Credentials.from_authorized_user_file(AUTH_DIR + 'token.json', SCOPES)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-                ROOT_DIR + '/auth/client_secrets.json', SCOPES)
+                AUTH_DIR + 'client_secrets.json', SCOPES)
             creds = flow.run_local_server(port=8080)
         # Save the credentials for the next run
-        with open(ROOT_DIR + '/auth/token.json', 'w') as token:
+        with open(AUTH_DIR + 'token.json', 'w') as token:
             token.write(creds.to_json())
 
     return creds
 
 
-def upload_to_drive(file_id, file_location, title, mime_type, context):
-
-    file = context.bot.getFile(file_id)
-    file.download(file_location)
+def upload_to_drive(file_path: str, file_title: str, file_mime_type: str):
 
     try:
-        # Get driver service to upload the file
         service = build('drive', 'v3', credentials=get_creds(), cache_discovery=False)
 
-        metadata = {'name': title}
-        media = MediaFileUpload(file_location, chunksize=1024 * 1024, mimetype=mime_type, resumable=True)
+        metadata = {'name': file_title}
+        media = MediaFileUpload(file_path, chunksize=1024 * 1024, mimetype=file_mime_type, resumable=True)
 
         # Upload file
         request = service.files().create(body=metadata,
@@ -62,11 +58,12 @@ def upload_to_drive(file_id, file_location, title, mime_type, context):
             if status:
                 print("Uploaded %d%%." % int(status.progress() * 100))
 
+        # Release media stream to so the process can delete it afterwards
+        media.stream().close()
+
+        # Delete uploaded file locally
+        os.remove(file_path)
+
     except Exception as e:
         raise Exception("Problem uploading file to Google Drive.")
 
-    finally:
-        media.stream().close()
-
-    # Delete uploaded file locally
-    os.remove(ROOT_DIR + '/files/' + title)

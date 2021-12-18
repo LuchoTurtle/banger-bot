@@ -14,10 +14,10 @@ from telegram.ext import (
 )
 
 from src.models import File, Action
-from src.gdrive import get_creds, upload_to_drive
-from src.youtube import youtube_callback
+from src.services.gdrive import get_creds, upload_to_drive
+from src.services.youtube import youtube_callback
 
-from src.shazam import shazam
+from src.services.shazam import shazam
 
 # Enable logging
 logging.basicConfig(
@@ -95,7 +95,7 @@ def audio_file_handler(update: Update, context: CallbackContext) -> None:
     update.message.reply_text('What do you want to do with this audio file?', reply_markup=reply_markup)
 
 
-def audio_file_handler_button(update: Update, context: CallbackContext) -> None:
+def audio_file_handler_button(update: Update, context: CallbackContext):
     """
     Audio file inline button callback function. This function processes the action chosen.
     @param update: Update object of message.
@@ -110,12 +110,16 @@ def audio_file_handler_button(update: Update, context: CallbackContext) -> None:
 
     answer_file: File = query.data
 
+    # Download file locally
+    file = context.bot.getFile(answer_file.file_id)
+    file.download(answer_file.get_file_location())
+
     # Check if the user wants to Shazam or directly upload the file to the Google Drive account
     if answer_file.action is Action.SHAZAM:
         query.edit_message_text("Please wait while we detect the song ⌛")
 
         song_title = asyncio.run(
-            shazam(answer_file.file_title, answer_file.file_id, context)
+            shazam(answer_file, context)
         )
 
         query.edit_message_text(text=f"We found a song! Here's the title: {song_title}")
@@ -123,8 +127,7 @@ def audio_file_handler_button(update: Update, context: CallbackContext) -> None:
     elif answer_file.action is Action.GDRIVE_UPLOAD:
         query.edit_message_text("Please wait while we upload the song ⌛")
 
-        file_location = '../files/' + answer_file.file_title
-        upload_to_drive(answer_file.file_id, file_location, answer_file.file_title, answer_file.mime_type, context)
+        upload_to_drive(answer_file.get_file_location(), answer_file.file_title, answer_file.mime_type)
 
         query.edit_message_text(text=f"Song uploaded!")
 

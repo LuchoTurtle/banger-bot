@@ -6,9 +6,11 @@ import youtube_dl
 from telegram import Update, ParseMode
 from telegram.ext import CallbackContext
 
-from src.gdrive import upload_to_drive
+from definitions import FILES_DIR
+from src.services.gdrive import upload_to_drive
 
 logger = logging.getLogger("BangerBot")
+
 
 def url_is_valid(update: Update, context: CallbackContext, url: str) -> bool:
     youtube_pattern = re.compile(
@@ -25,7 +27,12 @@ def youtube_callback(update: Update, context: CallbackContext, url: str) -> None
     if url_is_valid(update, context, url):
         ydl_opts = {
             'format': 'bestaudio/best',
-            'outtmpl': '../files/%(title)s.%(ext)s'
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '320',
+            }],
+            'outtmpl': FILES_DIR + '%(title)s.%(ext)s'
         }
         try:
             with youtube_dl.YoutubeDL(ydl_opts) as ydl:
@@ -36,8 +43,8 @@ def youtube_callback(update: Update, context: CallbackContext, url: str) -> None
                 # Download and get file info
                 info = ydl.extract_info(url, download=True)
 
-                filepath = ydl.prepare_filename(info)
                 title = info['title']
+                filepath = FILES_DIR + title + '.mp3'
                 mime = magic.Magic(mime=True)
                 mimetype = mime.from_file(filepath)
 
