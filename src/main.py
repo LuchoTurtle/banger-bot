@@ -13,7 +13,8 @@ from telegram.ext import (
     CallbackContext
 )
 
-from src.models import File, Action
+from src.exceptions import TrackNotFound
+from src.models import File, Action, ShazamTrack
 from src.services.gdrive import get_creds, upload_to_drive
 from src.services.youtube import youtube_callback
 
@@ -118,11 +119,20 @@ def audio_file_handler_button(update: Update, context: CallbackContext):
     if answer_file.action is Action.SHAZAM:
         query.edit_message_text("Please wait while we detect the song ⌛")
 
-        song_title = asyncio.run(
-            shazam(answer_file, context)
-        )
+        try:
+            track: ShazamTrack = asyncio.run(
+                shazam(answer_file, context)
+            )
 
-        query.edit_message_text(text=f"We found a song! Here's the title: {song_title}")
+            query.edit_message_text("We found a track! 🎉")
+
+            context.bot.send_photo(chat_id=update.effective_chat.id,
+                                   photo=track.image,
+                                   caption=f'It\'s *{track.subtitle} - {track.title}*\n',
+                                   parse_mode=ParseMode.MARKDOWN)
+
+        except TrackNotFound:
+            query.edit_message_text(f'Unfortunately we couldn\'t detect a song ☹')
 
     elif answer_file.action is Action.GDRIVE_UPLOAD:
         query.edit_message_text("Please wait while we upload the song ⌛")
