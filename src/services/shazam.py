@@ -3,8 +3,8 @@ import os
 from telegram.ext import CallbackContext
 from shazamio import Shazam
 
-from src.exceptions import TrackNotFound
-from src.models import File, ShazamTrack
+from exceptions import TrackNotFound
+from models import File, ShazamTrack
 
 
 # TODO We need to find a way to automatically instapp ffmpeg and add it to path variable before running, it's needed

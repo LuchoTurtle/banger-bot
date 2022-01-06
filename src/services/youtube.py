@@ -6,8 +6,8 @@ import youtube_dl
 from telegram import Update, ParseMode
 from telegram.ext import CallbackContext
 
-from definitions import FILES_DIR
-from src.services.gdrive import upload_to_drive
+from definitions.definitions import FILES_DIR
+from services.gdrive import upload_to_drive
 
 logger = logging.getLogger("BangerBot")
 

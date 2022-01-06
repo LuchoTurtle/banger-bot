@@ -156,3 +156,7 @@ dmypy.json
 .vscode/
 
 auth/*
+
+tests/banger_bot_test.session
+
+tests/banger_bot_test.session-journal

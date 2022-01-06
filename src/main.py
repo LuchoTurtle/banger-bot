@@ -13,12 +13,12 @@ from telegram.ext import (
     CallbackContext
 )
 
-from src.exceptions import TrackNotFound
-from src.models import File, Action, ShazamTrack
-from src.services.gdrive import get_creds, upload_to_drive
-from src.services.youtube import youtube_callback
+from exceptions import TrackNotFound
+from models import File, Action, ShazamTrack
+from services.gdrive import get_creds, upload_to_drive
+from services.youtube import youtube_callback
 
-from src.services.shazam import shazam
+from services.shazam import shazam
 
 # Enable logging
 logging.basicConfig(
@@ -145,7 +145,7 @@ def audio_file_handler_button(update: Update, context: CallbackContext):
         query.edit_message_text("That action is not permitted 🙁")
 
 
-def main():
+def exec():
     """Start the bot."""
     get_creds()
 
@@ -167,4 +167,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    exec()

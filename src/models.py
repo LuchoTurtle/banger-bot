@@ -1,8 +1,8 @@
 import enum
 from dataclasses import dataclass
 
-from definitions import FILES_DIR
-from src.exceptions import TrackNotFound
+from definitions.definitions import FILES_DIR
+from exceptions import TrackNotFound
 
 
 class Action(enum.Enum):
