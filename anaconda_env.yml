@@ -51,6 +51,7 @@ dependencies:
     - certifi==2020.11.8
     - charset-normalizer==2.0.9
     - colorama==0.4.4
+    - coverage==6.2
     - dataclass-factory==2.13
     - ffmpeg==1.4
     - frozenlist==1.2.0
@@ -83,6 +84,8 @@ dependencies:
     - pyrogram==1.2.20
     - pytest==6.2.5
     - pytest-asyncio==0.16.0
+    - pytest-cov==3.0.0
+    - pytest-mock==3.6.1
     - python-decouple==3.3
     - python-magic==0.4.24
     - python-magic-bin==0.4.14
@@ -92,6 +95,7 @@ dependencies:
     - rsa==4.7.2
     - shazamio==0.0.5
     - tgintegration==1.2.0
+    - tomli==2.0.0
     - uritemplate==3.0.1
     - urllib3==1.26.2
     - yarl==1.7.2

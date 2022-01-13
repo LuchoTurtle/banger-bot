@@ -4,3 +4,7 @@ class FileDoesNotExist(Exception):
 
 class TrackNotFound(Exception):
     pass
+
+
+class GoogleDriveClientSecretNotFound(Exception):
+    pass

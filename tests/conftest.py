@@ -8,10 +8,14 @@ from tgintegration import BotController
 
 import subprocess
 import time
-from definitions.definitions import SRC_DIR
+from src.definitions.definitions import SRC_DIR
+
+#coverage run --omit="*/tests*" --source=. -m pytest tests/unit -s
+#https://stackoverflow.com/questions/63623930/how-to-create-unit-test-for-a-python-telegram-bot
+# Para o main, criar mock Updater e Context para testar o main como se fosse um unit test
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def run_bot():
     print("Starting bot...")
     ds_proc = subprocess.Popen(
@@ -32,8 +36,8 @@ def run_bot():
     ds_proc.terminate()
 
 
-@pytest.fixture(scope="session", autouse=True)
-def event_loop(request):
+@pytest.fixture(scope="session")
+def event_loop():
     """ Create an instance of the default event loop for the session and boots up bot """
     loop = asyncio.get_event_loop_policy().new_event_loop()
 
@@ -58,7 +62,7 @@ async def client() -> Client:
 
 
 @pytest.fixture(scope="module")
-async def controller(client):
+async def controller(client, event_loop, run_bot):
     c = BotController(
         peer="@banger_music_bot",  # We are going to run tests on https://t.me/banger_music_bot
         client=client,

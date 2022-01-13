@@ -1,7 +1,5 @@
 import pytest
-import asyncio
 from tgintegration import Response
-
 
 # Mark these tests as async for PyTest
 pytestmark = pytest.mark.asyncio
@@ -16,6 +14,3 @@ async def test_ping(event_loop, controller, client):
         await controller.send_command("/start ")
 
     assert response.num_messages == 1
-
-
-
