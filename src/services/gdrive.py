@@ -11,7 +11,8 @@ from src.definitions.definitions import AUTH_DIR
 
 from googleapiclient.http import MediaFileUpload
 
-from src.exceptions import GoogleDriveClientSecretNotFound
+from src.exceptions import GoogleDriveClientSecretNotFound, FileDoesNotExist, GoogleDriveInvalidFileMeta, \
+    GoogleDriveUploadFail
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/drive']
@@ -52,6 +53,13 @@ def get_creds(token_path=AUTH_DIR + 'token.json', client_secrets_path=AUTH_DIR +
 
 
 def upload_to_drive(file_path: str, file_title: str, file_mime_type: str):
+    # Verifying params
+    if not os.path.exists(file_path):
+        raise FileDoesNotExist
+
+    if len(file_title) == 0 or len(file_mime_type) == 0:
+        raise GoogleDriveInvalidFileMeta
+
     try:
         service = build('drive', 'v3', credentials=get_creds(), cache_discovery=False)
 
@@ -65,8 +73,6 @@ def upload_to_drive(file_path: str, file_title: str, file_mime_type: str):
         response = None
         while response is None:
             status, response = request.next_chunk()
-            if status:
-                print("Uploaded %d%%." % int(status.progress() * 100))
 
         # Release media stream to so the process can delete it afterwards
         media.stream().close()
@@ -75,4 +81,4 @@ def upload_to_drive(file_path: str, file_title: str, file_mime_type: str):
         os.remove(file_path)
 
     except Exception as e:
-        raise Exception("Problem uploading file to Google Drive.")
+        raise GoogleDriveUploadFail("Problem uploading file to Google Drive.")

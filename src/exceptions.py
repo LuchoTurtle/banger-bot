@@ -8,3 +8,11 @@ class TrackNotFound(Exception):
 
 class GoogleDriveClientSecretNotFound(Exception):
     pass
+
+
+class GoogleDriveInvalidFileMeta(Exception):
+    pass
+
+
+class GoogleDriveUploadFail(Exception):
+    pass

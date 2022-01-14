@@ -2,12 +2,13 @@ import pytest
 from pytest_mock import MockerFixture
 from unittest.mock import Mock, mock_open, patch
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.http import MediaFileUpload
 from datetime import datetime, timedelta
 
 from src.definitions.definitions import AUTH_DIR
-from src.exceptions import GoogleDriveClientSecretNotFound
-from src.services.gdrive import get_creds
+from src.exceptions import GoogleDriveClientSecretNotFound, FileDoesNotExist, GoogleDriveInvalidFileMeta, \
+    GoogleDriveUploadFail
+from src.services.gdrive import get_creds, upload_to_drive
 import src.services.gdrive
 
 
@@ -42,7 +43,7 @@ def mocked_credentials(valid: bool = True, expired: bool = False, refresh_token=
 def mocked_flow() -> Mock:
     """
     Mocks Google auth flow object.
-    @return:
+    @return: mocked Google auth flow object.
     """
     # Defining main_flow, which returns a mock_flow which will return a credential object.
     mock_flow = Mock()
@@ -57,13 +58,48 @@ def mocked_flow() -> Mock:
     return main_flow
 
 
+def mocked_build() -> Mock:
+    """
+    Mocks Google service upload object.
+    @return: mocked Google service upload object.
+    """
+    mock_request = Mock()
+    mock_request.next_chunk.return_value = ("status", "response")
+
+    mock_service_files = Mock()
+    mock_service_files.create.return_value = mock_request
+
+    mock_service = Mock()
+    mock_service.files.return_value = mock_service_files
+
+    mock_build = Mock()
+    mock_build.return_value = mock_service
+
+    return mock_build
+
+
+def mocked_media() -> Mock:
+    """
+    Mocks Google media upload object.
+    @return: mocked Google media upload object.
+    """
+    mock_media = Mock(spec=MediaFileUpload)
+    mock_media.stream.close.return_value = None
+
+    mock_media_file_upload = Mock(return_value=mock_media)
+
+    return mock_media_file_upload
+
+
+# Get credentials --------------------------------------
+
 def test_clientsecret_not_found():
     """Erroring when paths do not point to a client secret and/or token json files."""
     with pytest.raises(GoogleDriveClientSecretNotFound):
         get_creds("", "")
 
 
-def test_normal(mocker: MockerFixture):
+def test_creds_normal(mocker: MockerFixture):
     """Normal flow - checks if there's creds on the auth file and returns if positive. Auth directory is mocked."""
 
     # Setting mocks
@@ -113,7 +149,6 @@ def test_creds_relogin(mocker: MockerFixture):
     with patch("builtins.open", mock_open(read_data="data")) as mock_file:
         creds = get_creds(AUTH_DIR, AUTH_DIR)
 
-
     assert creds.from_authorized_user_file().client_id == mock_cred.from_authorized_user_file().client_id
     assert creds.from_authorized_user_file().client_secret == mock_cred.from_authorized_user_file().client_secret
     assert creds.from_authorized_user_file().token == mock_cred.from_authorized_user_file().token
@@ -121,3 +156,52 @@ def test_creds_relogin(mocker: MockerFixture):
     # Check if the flow methods have been called
     mock_flow.from_client_secrets_file.assert_called_once()
     mock_flow.from_client_secrets_file().run_local_server.assert_called_once()
+
+
+# Upload to drive --------------------------------------
+
+def test_upload_file_not_found():
+    """Erroring when given file path does not point to a valid object."""
+    with pytest.raises(FileDoesNotExist):
+        upload_to_drive("", "", "")
+
+
+def test_upload_filemeta_invalid():
+    """Erroring when given file metadata are empty."""
+    with pytest.raises(GoogleDriveInvalidFileMeta):
+        upload_to_drive(AUTH_DIR, "", "")
+
+
+def test_upload_file_error(mocker):
+    """Erroring when given there was trouble uploading file."""
+    mock_build = mocked_build()
+    mock_media = mocked_media()
+    mock_build.side_effect = Exception("fail")
+    mock_media.side_effect = Exception("fail")
+    mocker.patch.object(src.services.gdrive, "build", mock_build)
+    mocker.patch.object(src.services.gdrive, "MediaFileUpload", mock_media)
+
+    with pytest.raises(GoogleDriveUploadFail):
+        upload_to_drive(AUTH_DIR, "test_file", "audio/mpeg")
+
+
+def test_upload_file_normal(mocker: MockerFixture):
+    """Normal flow - checks if there's creds on the auth file and returns if positive. Auth directory is mocked."""
+
+    # Setting mocks
+    mock_build = mocked_build()
+    mock_media = mocked_media()
+    mocker.patch.object(src.services.gdrive, "build", mock_build)
+    mocker.patch.object(src.services.gdrive, "MediaFileUpload", mock_media)
+
+    # Running and asserts
+    with patch("os.remove"):
+        upload_to_drive(AUTH_DIR, "mo_bamba", "audio/mpeg")
+
+    mock_build.assert_called_once()
+    mock_media.assert_called_once()
+    mock_build.return_value.files.assert_called_once()
+    mock_build.return_value.files.return_value.create.assert_called_once()
+    mock_build.return_value.files.return_value.create.return_value.next_chunk.assert_called_once()
+    mock_media.return_value.stream.assert_called_once()
+    mock_media.return_value.stream.return_value.close.assert_called_once()
