@@ -186,7 +186,7 @@ def test_upload_file_error(mocker):
 
 
 def test_upload_file_normal(mocker: MockerFixture):
-    """Normal flow - checks if there's creds on the auth file and returns if positive. Auth directory is mocked."""
+    """Normal flow - uploads file to Google Drive."""
 
     # Setting mocks
     mock_build = mocked_build()
