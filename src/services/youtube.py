@@ -6,15 +6,15 @@ import youtube_dl
 from telegram import Update, ParseMode
 from telegram.ext import CallbackContext
 
-from definitions.definitions import FILES_DIR
-from services.gdrive import upload_to_drive
+from src.definitions.definitions import FILES_DIR
+from src.services.gdrive import upload_to_drive
 
 logger = logging.getLogger("BangerBot")
 
 
 def url_is_valid(update: Update, context: CallbackContext, url: str) -> bool:
     youtube_pattern = re.compile(
-        "(?:https?:\/\/)?(?:youtu\.be\/|(?:www\.|m\.)?youtube\.com\/(?:watch|v|embed)(?:\.php)?(?:\?.*v=|\/))([a-zA-Z0-9\_-]+)")
+        r"(?:https?:\/\/)?(?:youtu\.be\/|(?:www\.|m\.)?youtube\.com\/(?:watch|v|embed)(?:\.php)?(?:\?.*v=|\/))([a-zA-Z0-9\_-]+)")
     if not bool(youtube_pattern.search(url)):
         context.bot.send_message(chat_id=update.effective_chat.id,
                                  text="This URL does not point to a valid Youtube video ❌.\nAre you sure it's not a channel? 🤔",
