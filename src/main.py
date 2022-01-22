@@ -13,12 +13,11 @@ from telegram.ext import (
     CallbackContext
 )
 
-from exceptions import TrackNotFound
-from models import File, Action, ShazamTrack
-from services.gdrive import get_creds, upload_to_drive
-from services.youtube import youtube_callback
-
-from services.shazam import shazam
+from src.exceptions import TrackNotFound
+from src.models import File, Action, ShazamTrack
+from src.services.gdrive import get_creds, upload_to_drive
+from src.services.youtube import youtube_callback
+from src.services.shazam import shazam
 
 # Enable logging
 logging.basicConfig(
