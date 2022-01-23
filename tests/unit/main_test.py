@@ -1,7 +1,10 @@
 from unittest.mock import Mock
+import pytest
 
 import src.main
-from src.main import start, help_command, url_handler
+from src.exceptions import TrackNotFound
+from src.models import File, Action, ShazamTrack
+from src.main import start, help_command, url_handler, audio_file_handler_button
 
 
 def test_start():
@@ -84,7 +87,7 @@ def test_url_handler_invalid(mocker):
     # Youtube callback
     youtube_callback = Mock()
 
-    # Callback mockmoc
+    # Callback mock
     callback_mock = Mock()
 
     mocker.patch.object(src.main, "youtube_callback", youtube_callback)
@@ -93,6 +96,210 @@ def test_url_handler_invalid(mocker):
 
     # Assertions
     assert "We are yet to support URLs from this place." in update_mock.message.reply_text.call_args[0][0]
+
+
+def test_audio_file_handler_button_shazam(mocker):
+    """Test callback handler when user presses button when file is sent (for Shazam)"""
+
+    file: File = File(Action.SHAZAM,
+                        "sample.mp3",
+                        "12345",
+                        "mpeg/audio",
+                        "15552")
+
+    return_track: ShazamTrack = ShazamTrack({
+        "track": {
+            "title": 'Goodbye To A World',
+            "subtitle": 'Porter Robinson',
+            "images": {
+                "coverarthq": "www.randomurl.com"
+            },
+            "hub": {
+                "providers": [
+                    {
+                        "caption": "randomcaption",
+                        "actions": [
+                            {
+                                "uri": "randomuri"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+    })
+
+    # Context mock
+    context_file_mock = Mock()
+    context_file_mock.download.return_value = None
+
+    bot_mock = Mock()
+    bot_mock.send_photo.return_value = None
+    bot_mock.getFile.return_value = context_file_mock
+
+    callback_mock = Mock()
+    callback_mock.bot = bot_mock
+
+    # Updater mock
+    query_mock = Mock()
+    query_mock.answer.return_value = None
+    query_mock.data = file
+    query_mock.edit_message_text.return_value = None
+
+    update_mock = Mock()
+    update_mock.callback_query = query_mock
+
+    # Asyncio mock
+    asyncio_mock = Mock()
+    asyncio_mock.run.return_value = return_track
+
+    mocker.patch.object(src.main, "asyncio", asyncio_mock)
+
+    audio_file_handler_button(update_mock, callback_mock)
+
+    # Assertions
+    asyncio_mock.run.assert_called_once()
+    assert "found a track" in query_mock.edit_message_text.call_args[0][0]
+
+
+def test_audio_file_handler_button_shazam_error(mocker):
+    """Errors because track couldn't be found."""
+
+    file: File = File(Action.SHAZAM,
+                        "sample.mp3",
+                        "12345",
+                        "mpeg/audio",
+                        "15552")
+
+    return_track: ShazamTrack = ShazamTrack({
+        "track": {
+            "title": 'Goodbye To A World',
+            "subtitle": 'Porter Robinson',
+            "images": {
+                "coverarthq": "www.randomurl.com"
+            },
+            "hub": {
+                "providers": [
+                    {
+                        "caption": "randomcaption",
+                        "actions": [
+                            {
+                                "uri": "randomuri"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+    })
+
+    # Context mock
+    context_file_mock = Mock()
+    context_file_mock.download.return_value = None
+
+    bot_mock = Mock()
+    bot_mock.send_photo.return_value = None
+    bot_mock.getFile.return_value = context_file_mock
+
+    callback_mock = Mock()
+    callback_mock.bot = bot_mock
+
+    # Updater mock
+    query_mock = Mock()
+    query_mock.answer.return_value = None
+    query_mock.data = file
+    query_mock.edit_message_text.return_value = None
+
+    update_mock = Mock()
+    update_mock.callback_query = query_mock
+
+    # Asyncio mock
+    asyncio_mock = Mock()
+    asyncio_mock.run.side_effect = TrackNotFound
+
+    mocker.patch.object(src.main, "asyncio", asyncio_mock)
+
+    audio_file_handler_button(update_mock, callback_mock)
+
+    # Asserts
+    asyncio_mock.run.assert_called_once()
+    assert "Unfortunately we couldn\'t detect a song" in query_mock.edit_message_text.call_args[0][0]
+
+
+def test_audio_file_handler_button_google_drive(mocker):
+    """Tests when Google Drive button is pressed."""
+
+    file: File = File(Action.GDRIVE_UPLOAD,
+                        "sample.mp3",
+                        "12345",
+                        "mpeg/audio",
+                        "15552")
+
+    # Context mock
+    context_file_mock = Mock()
+    context_file_mock.download.return_value = None
+
+    bot_mock = Mock()
+    bot_mock.send_photo.return_value = None
+    bot_mock.getFile.return_value = context_file_mock
+
+    callback_mock = Mock()
+    callback_mock.bot = bot_mock
+
+    # Updater mock
+    query_mock = Mock()
+    query_mock.answer.return_value = None
+    query_mock.data = file
+    query_mock.edit_message_text.return_value = None
+
+    update_mock = Mock()
+    update_mock.callback_query = query_mock
+
+    # Google drive
+    upload_to_drive_mock = Mock()
+
+    mocker.patch.object(src.main, "upload_to_drive", upload_to_drive_mock)
+
+    audio_file_handler_button(update_mock, callback_mock)
+
+    # Asserts
+    upload_to_drive_mock.assert_called_once()
+
+
+def test_audio_file_handler_button_action_not_permitted(mocker):
+    """Tests when unauthorized action is made.."""
+
+    file: File = File("random_action",
+                        "sample.mp3",
+                        "12345",
+                        "mpeg/audio",
+                        "15552")
+
+    # Context mock
+    context_file_mock = Mock()
+    context_file_mock.download.return_value = None
+
+    bot_mock = Mock()
+    bot_mock.send_photo.return_value = None
+    bot_mock.getFile.return_value = context_file_mock
+
+    callback_mock = Mock()
+    callback_mock.bot = bot_mock
+
+    # Updater mock
+    query_mock = Mock()
+    query_mock.answer.return_value = None
+    query_mock.data = file
+    query_mock.edit_message_text.return_value = None
+
+    update_mock = Mock()
+    update_mock.callback_query = query_mock
+
+    audio_file_handler_button(update_mock, callback_mock)
+
+    # Asserts
+    assert "That action is not permitted" in query_mock.edit_message_text.call_args[0][0]
+
 
 
 
