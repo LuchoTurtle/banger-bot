@@ -15,4 +15,3 @@ tgintegration==1.2.0
 shazamio==0.0.5
 youtube-dl==2021.6.6
 python-magic==0.4.24
-python-magic-bin==0.4.14
