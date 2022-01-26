@@ -193,6 +193,7 @@ def test_upload_file_normal(mocker: MockerFixture):
     mock_media = mocked_media()
     mocker.patch.object(src.services.gdrive, "build", mock_build)
     mocker.patch.object(src.services.gdrive, "MediaFileUpload", mock_media)
+    mocker.patch.object(src.services.gdrive, "get_creds", Mock())
 
     # Running and asserts
     with patch("os.remove"):
