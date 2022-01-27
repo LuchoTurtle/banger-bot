@@ -16,13 +16,19 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+          
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          
+      - name: Setup FFmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v1.1.0
+
       - name: Test with pytest and coverage
         run: |
           coverage run --omit="*/tests*" --source=. -m pytest tests/unit -s
+          
       - name: coverage.py badge
         uses: tj-actions/coverage-badge-py@v1.6
         with:
