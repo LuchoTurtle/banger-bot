@@ -28,8 +28,6 @@ jobs:
           
       - name: Setup FFmpeg
         uses: FedericoCarboni/setup-ffmpeg@v1.1.0
-        
-      - name: Insta
 
       - name: Test with pytest and coverage
         run: |
