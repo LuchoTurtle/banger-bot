@@ -6,7 +6,7 @@ jobs:
   build-test:
     strategy:
       matrix:
-        os: [macos-latest, windows-latest,  ubuntu-latest]
+        os: [macos-latest, ubuntu-latest]
 
     runs-on: ${{ matrix.os }}
 
