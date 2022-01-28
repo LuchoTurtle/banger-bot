@@ -1,10 +1,9 @@
-name: Python package
+name: Build and Test
 
 on: [push]
 
 jobs:
-  build:
-
+  build-test:
     strategy:
       matrix:
         os: [macos-latest, windows-latest,  ubuntu-latest]
@@ -17,7 +16,6 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: 3.9
-          fetch-depth: 0
           
       - name: Install dependencies
         run: |
@@ -36,7 +34,9 @@ jobs:
         run: |
           coverage run --omit="*/tests*" --source=. -m pytest tests/unit -s
           
+      # One could create a seperate workflow that creates the badge (since it only works on Ubuntu) but I'd need the '.coverage' file and this is faster and hackier :)
       - name: Coverage badge
+        if: matrix.os == 'ubuntu-latest'
         uses: tj-actions/coverage-badge-py@v1.6
         with:
           # Output path to write the badge.
@@ -44,13 +44,14 @@ jobs:
           overwrite: true
           
       - name: Verify Changed files
+        if: matrix.os == 'ubuntu-latest'
         uses: tj-actions/verify-changed-files@v6
         id: changed_files
         with:
           files: docs/coverage.svg
 
       - name: Commit files
-        if: steps.changed_files.outputs.files_changed == 'true'
+        if: steps.changed_files.outputs.files_changed == 'true' & matrix.os == 'ubuntu-latest'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -58,7 +59,7 @@ jobs:
           git commit -m "Updated coverage.svg"
 
       - name: Push changes
-        if: steps.changed_files.outputs.files_changed == 'true'
+        if: steps.changed_files.outputs.files_changed == 'true' & matrix.os == 'ubuntu-latest'
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.github_token }}
