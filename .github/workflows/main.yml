@@ -5,17 +5,18 @@ on: [push]
 jobs:
   build:
 
-    runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9]
+        os: [macos-latest, windows-latest,  ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.9
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.9
           fetch-depth: 0
           
       - name: Install dependencies
