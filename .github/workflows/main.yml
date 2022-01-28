@@ -34,7 +34,7 @@ jobs:
         run: |
           coverage run --omit="*/tests*" --source=. -m pytest tests/unit -s
           
-      # One could create a seperate workflow that creates the badge (since it only works on Ubuntu) but I'd need the '.coverage' file and this is faster and hackier :)
+      # One could create a seperate workflow that creates the badge (since it only works on Ubuntu) but I'd need the '.coverage' file on the other workflow, which would take longer. So let's just push the badge when running on Ubuntu :)
       - name: Coverage badge
         if: matrix.os == 'ubuntu-latest'
         uses: tj-actions/coverage-badge-py@v1.6
@@ -51,7 +51,7 @@ jobs:
           files: docs/coverage.svg
 
       - name: Commit files
-        if: steps.changed_files.outputs.files_changed == 'true' & matrix.os == 'ubuntu-latest'
+        if: (steps.changed_files.outputs.files_changed == 'true') && (matrix.os == 'ubuntu-latest')
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -59,7 +59,7 @@ jobs:
           git commit -m "Updated coverage.svg"
 
       - name: Push changes
-        if: steps.changed_files.outputs.files_changed == 'true' & matrix.os == 'ubuntu-latest'
+        if: (steps.changed_files.outputs.files_changed == 'true') && (matrix.os == 'ubuntu-latest')
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.github_token }}
