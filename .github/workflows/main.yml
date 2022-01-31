@@ -1,4 +1,4 @@
-name: Build and Test
+name: Build
 
 on: [push]
 
@@ -35,7 +35,7 @@ jobs:
           coverage run --omit="*/tests*" --source=. -m pytest tests/unit -s
           
       # One could create a seperate workflow that creates the badge (since it only works on Ubuntu) but I'd need the '.coverage' file on the other workflow, which would take longer. So let's just push the badge when running on Ubuntu :)
-      - name: Coverage badge
+      - name: Testing and coverage badge
         if: matrix.os == 'ubuntu-latest'
         uses: tj-actions/coverage-badge-py@v1.6
         with:
