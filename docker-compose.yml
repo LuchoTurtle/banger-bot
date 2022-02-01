@@ -12,8 +12,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    depends_on:
-      - mongo
     networks:
       - bangernet
     environment:
