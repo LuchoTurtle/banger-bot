@@ -4,7 +4,7 @@ import pytest
 import src.main
 from src.exceptions import TrackNotFound
 from src.models import File, Action, ShazamTrack
-from src.main import start, help_command, url_handler, audio_file_handler_button
+from src.main import start, help_command, url_handler, audio_file_handler_button, audio_file_handler
 
 
 def test_start():
@@ -102,10 +102,10 @@ def test_audio_file_handler_button_shazam(mocker):
     """Test callback handler when user presses button when file is sent (for Shazam)"""
 
     file: File = File(Action.SHAZAM,
-                        "sample.mp3",
-                        "12345",
-                        "mpeg/audio",
-                        "15552")
+                      "sample.mp3",
+                      "12345",
+                      "mpeg/audio",
+                      "15552")
 
     return_track: ShazamTrack = ShazamTrack({
         "track": {
@@ -166,10 +166,10 @@ def test_audio_file_handler_button_shazam_error(mocker):
     """Errors because track couldn't be found."""
 
     file: File = File(Action.SHAZAM,
-                        "sample.mp3",
-                        "12345",
-                        "mpeg/audio",
-                        "15552")
+                      "sample.mp3",
+                      "12345",
+                      "mpeg/audio",
+                      "15552")
 
     return_track: ShazamTrack = ShazamTrack({
         "track": {
@@ -230,10 +230,10 @@ def test_audio_file_handler_button_google_drive(mocker):
     """Tests when Google Drive button is pressed."""
 
     file: File = File(Action.GDRIVE_UPLOAD,
-                        "sample.mp3",
-                        "12345",
-                        "mpeg/audio",
-                        "15552")
+                      "sample.mp3",
+                      "12345",
+                      "mpeg/audio",
+                      "15552")
 
     # Context mock
     context_file_mock = Mock()
@@ -270,10 +270,10 @@ def test_audio_file_handler_button_action_not_permitted(mocker):
     """Tests when unauthorized action is made.."""
 
     file: File = File("random_action",
-                        "sample.mp3",
-                        "12345",
-                        "mpeg/audio",
-                        "15552")
+                      "sample.mp3",
+                      "12345",
+                      "mpeg/audio",
+                      "15552")
 
     # Context mock
     context_file_mock = Mock()
@@ -301,5 +301,85 @@ def test_audio_file_handler_button_action_not_permitted(mocker):
     assert "That action is not permitted" in query_mock.edit_message_text.call_args[0][0]
 
 
+def test_audio_file_handler_voice(mocker):
+    """Tests when a voice audio is sent and handled."""
+
+    # Updater mock
+    audio_mock = Mock()
+    audio_mock.title = "title"
+    audio_mock.file_id = "file_id"
+    audio_mock.mime_type = "mime_type"
+
+    message_mock = Mock()
+    message_mock.audio = audio_mock
+    message_mock.reply_text.return_value = None
+
+    effective_chat_mock = Mock()
+    effective_chat_mock.id = "id"
+
+    update_mock = Mock()
+    update_mock.message = message_mock
+    update_mock.effective_chat = effective_chat_mock
+
+    # Callback mock
+    callback_mock = Mock()
+
+    audio_file_handler(update_mock, callback_mock)
+
+    # Asserts
+    message_mock.reply_text.assert_called_once()
 
 
+def test_audio_file_handler_audio(mocker):
+    """Tests when an audio file is sent and handled."""
+
+    # Updater mock
+    voice_mock = Mock()
+    voice_mock.file_unique_id = "file_unique_id"
+    voice_mock.file_id = "file_id"
+    voice_mock.mime_type = "mime_type"
+
+    message_mock = Mock()
+    message_mock.voice = voice_mock
+    message_mock.reply_text.return_value = None
+
+    effective_chat_mock = Mock()
+    effective_chat_mock.id = "id"
+
+    update_mock = Mock()
+    update_mock.message = message_mock
+    update_mock.effective_chat = effective_chat_mock
+
+    # Callback mock
+    callback_mock = Mock()
+
+    audio_file_handler(update_mock, callback_mock)
+
+    # Asserts
+    message_mock.reply_text.assert_called_once()
+
+
+def test_audio_file_handler_none(mocker):
+    """Tests when not voice nor audio file are sent."""
+
+    # Updater mock
+
+    message_mock = Mock()
+    message_mock.voice = None
+    message_mock.audio = None
+    message_mock.reply_text.return_value = None
+
+    effective_chat_mock = Mock()
+    effective_chat_mock.id = "id"
+
+    update_mock = Mock()
+    update_mock.message = message_mock
+    update_mock.effective_chat = effective_chat_mock
+
+    # Callback mock
+    callback_mock = Mock()
+
+    audio_file_handler(update_mock, callback_mock)
+
+    # Asserts
+    assert message_mock.reply_text.called is not True

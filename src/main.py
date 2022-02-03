@@ -70,17 +70,41 @@ def audio_file_handler(update: Update, context: CallbackContext) -> None:
     @param context: Callback Context object.
     @return:
     """
-    shazam_obj: File = File(Action.SHAZAM,
-                            update.message.audio.title,
-                            update.message.audio.file_id,
-                            update.message.audio.mime_type,
-                            update.effective_chat.id)
 
-    direct_obj: File = File(Action.GDRIVE_UPLOAD,
-                            update.message.audio.title,
-                            update.message.audio.file_id,
-                            update.message.audio.mime_type,
-                            update.effective_chat.id)
+    message_type = None
+    if update.message.audio is not None:
+        message_type = "audio"
+    elif update.message.voice is not None:
+        message_type = "voice"
+
+    if message_type == "audio":
+        shazam_obj: File = File(Action.SHAZAM,
+                                update.message.audio.title,
+                                update.message.audio.file_id,
+                                update.message.audio.mime_type,
+                                update.effective_chat.id)
+
+        direct_obj: File = File(Action.GDRIVE_UPLOAD,
+                                update.message.audio.title,
+                                update.message.audio.file_id,
+                                update.message.audio.mime_type,
+                                update.effective_chat.id)
+
+    elif message_type == "voice":
+        shazam_obj: File = File(Action.SHAZAM,
+                                update.message.voice.file_unique_id,
+                                update.message.voice.file_id,
+                                update.message.voice.mime_type,
+                                update.effective_chat.id)
+
+        direct_obj: File = File(Action.GDRIVE_UPLOAD,
+                                update.message.voice.file_unique_id,
+                                update.message.voice.file_id,
+                                update.message.voice.mime_type,
+                                update.effective_chat.id)
+
+    else:
+        return None
 
     keyboard = [
         [
@@ -157,6 +181,7 @@ def exec():
     dispatcher.add_handler(CommandHandler("help", help_command))
 
     dispatcher.add_handler(MessageHandler(Filters.audio, audio_file_handler))
+    dispatcher.add_handler(MessageHandler(Filters.voice, audio_file_handler))
     updater.dispatcher.add_handler(CallbackQueryHandler(audio_file_handler_button))
 
     dispatcher.add_handler(MessageHandler(Filters.entity("url"), url_handler))
