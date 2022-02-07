@@ -52,15 +52,25 @@ and find all the info needed there! 😊
 def url_handler(update: Update, context: CallbackContext) -> None:
     # TODO Organize code, get more detailed metadata from URLs
     # TODO create filter for known providers : Spotify, Apple Music, SoundCloud, etc
+    tag_regex = r".*\|"
     url_regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
-    url = (re.findall(url_regex, update.message.text)[0])[0]
 
-    youtube_pattern = re.compile(
-        "(?:https?:\/\/)?(?:youtu\.be\/|(?:www\.|m\.)?youtube\.com\/?)")
-    if bool(youtube_pattern.search(url)):
-        youtube_callback(update, context, url)
-    else:
-        update.message.reply_text("We are yet to support URLs from this place. 😕", parse_mode=ParseMode.MARKDOWN)
+    url_match = re.search(url_regex, update.message.text)
+    tag_match = re.search(tag_regex, update.message.text)
+
+    if url_match:
+
+        url = url_match.group(0)
+        youtube_pattern = re.compile("(?:https?:\/\/)?(?:youtu\.be\/|(?:www\.|m\.)?youtube\.com\/?)")
+        if bool(youtube_pattern.search(url)):
+
+            tag = None
+            if tag_match:
+                tag = tag_match.group(0).replace("|", "").strip()
+
+            youtube_callback(update, context, url, tag=tag)
+        else:
+            update.message.reply_text("We are yet to support URLs from this place. 😕", parse_mode=ParseMode.MARKDOWN)
 
 
 def audio_file_handler(update: Update, context: CallbackContext) -> None:

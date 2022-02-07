@@ -58,7 +58,10 @@ def test_callback_normal(mocker):
 
     # Youtube
     ydl_mock = Mock()
-    ydl_mock.extract_info.return_value = {"title": "sample"}
+    ydl_mock.extract_info.return_value = {
+        "title": "sample",
+        "id": "sample"
+    }
 
     # Update mock
     effective_chat_mock = Mock()
@@ -93,7 +96,10 @@ def test_error_downloading(mocker):
 
     # Youtube
     ydl_mock = Mock()
-    ydl_mock.extract_info.return_value = {"title": "sample"}
+    ydl_mock.extract_info.return_value = {
+        "title": "sample",
+        "id": "sample"
+    }
 
     # Update mock
     effective_chat_mock = Mock()
@@ -125,7 +131,10 @@ def test_error_uploading_to_drive(mocker):
 
     # Youtube
     ydl_mock = Mock()
-    ydl_mock.extract_info.return_value = {"title": "sample"}
+    ydl_mock.extract_info.return_value = {
+        "title": "sample",
+        "id": "sample"
+    }
 
     # Update mock
     effective_chat_mock = Mock()

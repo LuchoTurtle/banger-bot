@@ -20,3 +20,8 @@ class GoogleDriveInvalidFileMeta(Exception):
 
 class GoogleDriveUploadFail(Exception):
     pass
+
+
+class GoogleDriveCreateFolderFail(Exception):
+    pass
+

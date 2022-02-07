@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 
 from src.definitions.definitions import AUTH_DIR
 from src.exceptions import GoogleDriveClientSecretNotFound, FileDoesNotExist, GoogleDriveInvalidFileMeta, \
-    GoogleDriveUploadFail
-from src.services.gdrive import get_creds, upload_to_drive
+    GoogleDriveUploadFail, GoogleDriveCreateFolderFail
+from src.services.gdrive import get_creds, upload_to_drive, create_drive_folder, get_drive_folder
 import src.services.gdrive
 
 
@@ -65,9 +65,22 @@ def mocked_build() -> Mock:
     """
     mock_request = Mock()
     mock_request.next_chunk.return_value = ("status", "response")
+    mock_request.execute.return_value = {
+        'id': "random_folder_id_123"
+    }
+
+    execute_mock = Mock()
+    execute_mock.execute.return_value = {
+        'files': [{
+            "name": "folder_name",
+            "id": "folder_id"
+        }],
+        'nextPageToken': None
+    }
 
     mock_service_files = Mock()
     mock_service_files.create.return_value = mock_request
+    mock_service_files.list.return_value = execute_mock
 
     mock_service = Mock()
     mock_service.files.return_value = mock_service_files
@@ -191,9 +204,16 @@ def test_upload_file_normal(mocker: MockerFixture):
     # Setting mocks
     mock_build = mocked_build()
     mock_media = mocked_media()
+    mock_create_folder = Mock()
+    mock_create_folder.return_value = "id_123"
+    mock_get_drive_folder = Mock()
+    mock_get_drive_folder.return_value = "id_123"
+
     mocker.patch.object(src.services.gdrive, "build", mock_build)
     mocker.patch.object(src.services.gdrive, "MediaFileUpload", mock_media)
     mocker.patch.object(src.services.gdrive, "get_creds", Mock())
+    mocker.patch.object(src.services.gdrive, "create_drive_folder", mock_create_folder)
+    mocker.patch.object(src.services.gdrive, "get_drive_folder", mock_get_drive_folder)
 
     # Running and asserts
     with patch("os.remove"):
@@ -206,3 +226,110 @@ def test_upload_file_normal(mocker: MockerFixture):
     mock_build.return_value.files.return_value.create.return_value.next_chunk.assert_called_once()
     mock_media.return_value.stream.assert_called_once()
     mock_media.return_value.stream.return_value.close.assert_called_once()
+
+
+def test_upload_file_normal_create_folder(mocker: MockerFixture):
+    """Normal flow - uploads file to Google Drive (and creates folder along the way)"""
+
+    # Setting mocks
+    mock_build = mocked_build()
+    mock_media = mocked_media()
+    mock_create_folder = Mock()
+    mock_create_folder.return_value = "id_123"
+    mock_get_drive_folder = Mock()
+    mock_get_drive_folder.return_value = None
+
+    mocker.patch.object(src.services.gdrive, "build", mock_build)
+    mocker.patch.object(src.services.gdrive, "MediaFileUpload", mock_media)
+    mocker.patch.object(src.services.gdrive, "get_creds", Mock())
+    mocker.patch.object(src.services.gdrive, "create_drive_folder", mock_create_folder)
+    mocker.patch.object(src.services.gdrive, "get_drive_folder", mock_get_drive_folder)
+
+    # Running and asserts
+    with patch("os.remove"):
+        upload_to_drive(AUTH_DIR, "mo_bamba", "audio/mpeg", "tag")
+
+    mock_build.assert_called_once()
+    mock_media.assert_called_once()
+    mock_build.return_value.files.assert_called_once()
+    mock_build.return_value.files.return_value.create.assert_called_once()
+    mock_build.return_value.files.return_value.create.return_value.next_chunk.assert_called_once()
+    mock_media.return_value.stream.assert_called_once()
+    mock_media.return_value.stream.return_value.close.assert_called_once()
+
+    mock_create_folder.assert_called_once()
+
+
+# Create folder --------------------------------------
+def test_create_folder(mocker: MockerFixture):
+    """Normal flow - creates a new folder without parent"""
+
+    # Setting mocks
+    mock_build = mocked_build()
+
+    mocker.patch.object(src.services.gdrive, "build", mock_build)
+    mocker.patch.object(src.services.gdrive, "get_creds", Mock())
+
+    # Running and asserts
+    folder_id = create_drive_folder("random_folder_name")
+
+    mock_build.assert_called_once()
+    assert folder_id == "random_folder_id_123"
+
+
+def test_create_folder_with_parentId(mocker: MockerFixture):
+    """Normal flow - creates a new folder without parent"""
+
+    # Setting mocks
+    mock_build = mocked_build()
+
+    mocker.patch.object(src.services.gdrive, "build", mock_build)
+    mocker.patch.object(src.services.gdrive, "get_creds", Mock())
+
+    # Running and asserts
+    folder_id = create_drive_folder("random_folder_name", "parentId")
+
+    mock_build.assert_called_once()
+    assert folder_id == "random_folder_id_123"
+
+
+def test_error_creating_folder(mocker: MockerFixture):
+    """Raises exception because there was an error creating a folder."""
+
+    mock_build = mocked_build()
+    mock_build.side_effect = Exception("fail")
+    mocker.patch.object(src.services.gdrive, "build", mock_build)
+
+    with pytest.raises(GoogleDriveCreateFolderFail):
+        create_drive_folder("random_folder_name")
+
+
+# Get folder --------------------------------------
+def test_get_drive_folder(mocker: MockerFixture):
+    """Normal flow - getting the drive folder name."""
+
+    # Setting mocks
+    build_mock = mocked_build()
+
+    mocker.patch.object(src.services.gdrive, "build", build_mock)
+    mocker.patch.object(src.services.gdrive, "get_creds", Mock())
+
+    # Running and asserts
+    folder_id = get_drive_folder("folder_name")
+
+    assert folder_id == "folder_id"
+
+
+def test_get_drive_folder_not_found(mocker: MockerFixture):
+    """Normal flow - not finding the folder with the name."""
+
+    # Setting mocks
+    build_mock = mocked_build()
+
+    mocker.patch.object(src.services.gdrive, "build", build_mock)
+    mocker.patch.object(src.services.gdrive, "get_creds", Mock())
+
+    # Running and asserts
+    folder_id = get_drive_folder("not_found")
+
+    assert folder_id is None

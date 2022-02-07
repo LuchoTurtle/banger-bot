@@ -23,7 +23,7 @@ def url_is_valid(update: Update, context: CallbackContext, url: str) -> bool:
     return True
 
 
-def youtube_callback(update: Update, context: CallbackContext, url: str) -> None:
+def youtube_callback(update: Update, context: CallbackContext, url: str, tag: str = None) -> None:
     if url_is_valid(update, context, url):
         ydl_opts = {
             'format': 'bestaudio/best',
@@ -32,7 +32,7 @@ def youtube_callback(update: Update, context: CallbackContext, url: str) -> None
                 'preferredcodec': 'mp3',
                 'preferredquality': '320',
             }],
-            'outtmpl': FILES_DIR + '%(title)s.%(ext)s'
+            'outtmpl': FILES_DIR + '%(id)s.%(ext)s'         # filepath is files/ID.mp3
         }
         try:
             with youtube_dl.YoutubeDL(ydl_opts) as ydl:
@@ -44,13 +44,15 @@ def youtube_callback(update: Update, context: CallbackContext, url: str) -> None
                 info = ydl.extract_info(url, download=True)
 
                 title = info['title']
-                filepath = FILES_DIR + title + '.mp3'
+                video_id = info['id']
+
+                filepath = FILES_DIR + video_id + '.mp3'
                 mime = magic.Magic(mime=True)
                 mimetype = mime.from_file(filepath)
 
                 try:
                     # Upload to GDrive
-                    upload_to_drive(filepath, title, mimetype)
+                    upload_to_drive(filepath, title, mimetype, tag)
 
                     # Send confirmation message
                     context.bot.send_message(chat_id=update.effective_chat.id,

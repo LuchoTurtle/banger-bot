@@ -49,6 +49,7 @@ def test_url_handler(mocker):
     """Test url handler. Should detect youtube links accordingly."""
 
     url = "https://www.youtube.com/watch?v=W2TE0DjdNqI&ab_channel=PorterRobinsonVEVO"
+    url2 = "porter|https://www.youtube.com/watch?v=W2TE0DjdNqI&ab_channel=PorterRobinsonVEVO"
 
     # Update mock
     message_mock = Mock()
@@ -66,10 +67,19 @@ def test_url_handler(mocker):
 
     mocker.patch.object(src.main, "youtube_callback", youtube_callback)
 
+    # Run #1
     url_handler(update_mock, callback_mock)
-
-    # Assertions
     youtube_callback.assert_called_once()
+
+    # Run #2
+    message2_mock = Mock()
+    message2_mock.text = url2
+    message2_mock.reply_text.return_value = None
+
+    update_mock.message = message2_mock
+
+    url_handler(update_mock, callback_mock)
+    youtube_callback.assert_called()
 
 
 def test_url_handler_invalid(mocker):
@@ -301,7 +311,7 @@ def test_audio_file_handler_button_action_not_permitted(mocker):
     assert "That action is not permitted" in query_mock.edit_message_text.call_args[0][0]
 
 
-def test_audio_file_handler_voice(mocker):
+def test_audio_file_handler_audio(mocker):
     """Tests when a voice audio is sent and handled."""
 
     # Updater mock
@@ -312,6 +322,7 @@ def test_audio_file_handler_voice(mocker):
 
     message_mock = Mock()
     message_mock.audio = audio_mock
+    message_mock.voice = None
     message_mock.reply_text.return_value = None
 
     effective_chat_mock = Mock()
@@ -330,7 +341,7 @@ def test_audio_file_handler_voice(mocker):
     message_mock.reply_text.assert_called_once()
 
 
-def test_audio_file_handler_audio(mocker):
+def test_audio_file_handler_voice(mocker):
     """Tests when an audio file is sent and handled."""
 
     # Updater mock
@@ -341,6 +352,7 @@ def test_audio_file_handler_audio(mocker):
 
     message_mock = Mock()
     message_mock.voice = voice_mock
+    message_mock.audio = None
     message_mock.reply_text.return_value = None
 
     effective_chat_mock = Mock()

@@ -12,7 +12,7 @@ from src.definitions.definitions import AUTH_DIR
 from googleapiclient.http import MediaFileUpload
 
 from src.exceptions import GoogleDriveClientSecretNotFound, FileDoesNotExist, GoogleDriveInvalidFileMeta, \
-    GoogleDriveUploadFail
+    GoogleDriveUploadFail, GoogleDriveCreateFolderFail
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/drive']
@@ -52,7 +52,63 @@ def get_creds(token_path=AUTH_DIR + 'token.json', client_secrets_path=AUTH_DIR +
     return creds
 
 
-def upload_to_drive(file_path: str, file_title: str, file_mime_type: str):
+def create_drive_folder(folder_name: str, parent_id=None):
+    """
+    Creates a new folder on Google Drive with the given name
+    @param folder_name: the name of the folder to be created.
+    @param parent_id: the folder parent ID if we want to create a folder inside a folder.
+    @return: ID of the newly created server
+    """
+
+    try:
+        service = build('drive', 'v3', credentials=get_creds(), cache_discovery=False)
+
+        file_metadata = {
+            'name': folder_name,
+            'mimeType': "application/vnd.google-apps.folder"
+        }
+        if parent_id:
+            file_metadata['parents'] = [{'id': parent_id}]
+
+        root_folder = service.files().create(body=file_metadata).execute()
+
+    except Exception as e:
+        raise GoogleDriveCreateFolderFail
+
+    return root_folder['id']
+
+
+def get_drive_folder(folder_name: str):
+    """
+    Fetches the ID of the Google Drive folder of the given name.
+    @param folder_name: name of the folder we're looking for
+    @return: ID of the folder. Returns None if no folder was found.
+    """
+    service = build('drive', 'v3', credentials=get_creds(), cache_discovery=False)
+
+    folder_id = None
+    page_token = None
+    while True and folder_id is None:
+        response = service.files().list(q="mimeType='application/vnd.google-apps.folder'",
+                                        spaces='drive',
+                                        fields='nextPageToken, files(id, name)',
+                                        pageToken=page_token).execute()
+
+        for file in response.get('files', []):
+
+            if file.get('name') == folder_name:
+                folder_id = file.get('id')
+                break
+
+        page_token = response.get('nextPageToken', None)
+        if page_token is None:
+            break
+
+    return folder_id
+
+
+def upload_to_drive(file_path: str, file_title: str, file_mime_type: str, destination_folder: str = None):
+
     # Verifying params
     if not os.path.exists(file_path):
         raise FileDoesNotExist
@@ -63,10 +119,24 @@ def upload_to_drive(file_path: str, file_title: str, file_mime_type: str):
     try:
         service = build('drive', 'v3', credentials=get_creds(), cache_discovery=False)
 
-        metadata = {'name': file_title}
-        media = MediaFileUpload(file_path, chunksize=1024 * 1024, mimetype=file_mime_type, resumable=True)
+        # Check if folder exists. If it does, use the ID to create folder. If not, we create a new folder
+        folder_id = get_drive_folder(destination_folder)
+
+        if folder_id is None:
+            folder_id = create_drive_folder(destination_folder)
+
+        if destination_folder:
+            metadata = {
+                'name': file_title,
+                'parents': [folder_id]
+            }
+        else:
+            metadata = {
+                'name': file_title
+            }
 
         # Upload file
+        media = MediaFileUpload(file_path, chunksize=1024 * 1024, mimetype=file_mime_type, resumable=True)
         request = service.files().create(body=metadata,
                                          media_body=media)
 
