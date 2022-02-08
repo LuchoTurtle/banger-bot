@@ -1,4 +1,3 @@
-import logging
 import re
 import asyncio
 
@@ -18,35 +17,7 @@ from src.models import File, Action, ShazamTrack
 from src.services.gdrive import get_creds, upload_to_drive
 from src.services.youtube import youtube_callback
 from src.services.shazam import shazam
-
-# Enable logging
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-)
-logger = logging.getLogger("BangerBot")
-
-
-def start(update: Update, context: CallbackContext) -> None:
-    logger.log(level=logging.INFO, msg="Bot initiated with /start command.")
-    update.message.reply_text(
-        """*Hi! Welcome Banger Bot!* 👋\n
-The bot is still under development but it is mainly intended for you and your friends to share music on a group chat and automatically upload it to a Google Drive folder you set up. \n
-Enjoy your music with your friends! 🎉 
-    """, parse_mode=ParseMode.MARKDOWN)
-
-
-def help_command(update: Update, context: CallbackContext) -> None:
-    logger.log(level=logging.INFO, msg="Printed /help command.")
-    update.message.reply_text("""
-*We're here to help!* 😀\n
-For the bot to properly work, you need a _Google Drive project set up and authorize this bot on startup to edit it_. 
-From there on, the bot will listen to relevant URLs and take care of downloading and uploading your music to Google Drive. \n
-Do you want some guidance setting everything up step-by-step? Click the button below to check our Github repository 
-and find all the info needed there! 😊
-""", reply_markup=InlineKeyboardMarkup([
-        [InlineKeyboardButton(text='Github Page', url='https://github.com/LuchoTurtle/banger-bot')],
-    ]),
-                              parse_mode=ParseMode.MARKDOWN)
+from src.handlers import start_handler, help_handler
 
 
 def url_handler(update: Update, context: CallbackContext) -> None:
@@ -63,7 +34,6 @@ def url_handler(update: Update, context: CallbackContext) -> None:
         url = url_match.group(0)
         youtube_pattern = re.compile("(?:https?:\/\/)?(?:youtu\.be\/|(?:www\.|m\.)?youtube\.com\/?)")
         if bool(youtube_pattern.search(url)):
-
             tag = None
             if tag_match:
                 tag = tag_match.group(0).replace("|", "").strip()
@@ -187,8 +157,8 @@ def exec():
     dispatcher = updater.dispatcher
 
     # Handlers
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("help", help_command))
+    dispatcher.add_handler(CommandHandler("start", start_handler))
+    dispatcher.add_handler(CommandHandler("help", help_handler()))
 
     dispatcher.add_handler(MessageHandler(Filters.audio, audio_file_handler))
     dispatcher.add_handler(MessageHandler(Filters.voice, audio_file_handler))

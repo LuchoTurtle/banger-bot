@@ -4,45 +4,7 @@ import pytest
 import src.main
 from src.exceptions import TrackNotFound
 from src.models import File, Action, ShazamTrack
-from src.main import start, help_command, url_handler, audio_file_handler_button, audio_file_handler
-
-
-def test_start():
-    """Test start command replies to message"""
-
-    # Update mock
-    message_mock = Mock()
-    message_mock.reply_text.return_value = None
-
-    update_mock = Mock()
-    update_mock.message = message_mock
-
-    # Callback mock
-    callback_mock = Mock()
-
-    start(update_mock, callback_mock)
-
-    assert update_mock.message.reply_text.called is True
-    assert "Welcome" in update_mock.message.reply_text.call_args[0][0]
-
-
-def test_help():
-    """Test help command replies to message"""
-
-    # Update mock
-    message_mock = Mock()
-    message_mock.reply_text.return_value = None
-
-    update_mock = Mock()
-    update_mock.message = message_mock
-
-    # Callback mock
-    callback_mock = Mock()
-
-    help_command(update_mock, callback_mock)
-
-    assert update_mock.message.reply_text.called is True
-    assert "help" in update_mock.message.reply_text.call_args[0][0]
+from src.main import url_handler, audio_file_handler_button, audio_file_handler
 
 
 def test_url_handler(mocker):
