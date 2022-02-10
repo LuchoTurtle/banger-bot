@@ -1,4 +1,3 @@
-import re
 import asyncio
 
 from decouple import config
@@ -13,34 +12,10 @@ from telegram.ext import (
 )
 
 from src.exceptions import TrackNotFound
+from src.handlers import start_handler, help_handler, url_handler
 from src.models import File, Action, ShazamTrack
 from src.services.gdrive import get_creds, upload_to_drive
-from src.services.youtube import youtube_callback
 from src.services.shazam import shazam
-from src.handlers import start_handler, help_handler
-
-
-def url_handler(update: Update, context: CallbackContext) -> None:
-    # TODO Organize code, get more detailed metadata from URLs
-    # TODO create filter for known providers : Spotify, Apple Music, SoundCloud, etc
-    tag_regex = r".*\|"
-    url_regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
-
-    url_match = re.search(url_regex, update.message.text)
-    tag_match = re.search(tag_regex, update.message.text)
-
-    if url_match:
-
-        url = url_match.group(0)
-        youtube_pattern = re.compile("(?:https?:\/\/)?(?:youtu\.be\/|(?:www\.|m\.)?youtube\.com\/?)")
-        if bool(youtube_pattern.search(url)):
-            tag = None
-            if tag_match:
-                tag = tag_match.group(0).replace("|", "").strip()
-
-            youtube_callback(update, context, url, tag=tag)
-        else:
-            update.message.reply_text("We are yet to support URLs from this place. 😕", parse_mode=ParseMode.MARKDOWN)
 
 
 def audio_file_handler(update: Update, context: CallbackContext) -> None:
@@ -158,7 +133,7 @@ def exec():
 
     # Handlers
     dispatcher.add_handler(CommandHandler("start", start_handler))
-    dispatcher.add_handler(CommandHandler("help", help_handler()))
+    dispatcher.add_handler(CommandHandler("help", help_handler))
 
     dispatcher.add_handler(MessageHandler(Filters.audio, audio_file_handler))
     dispatcher.add_handler(MessageHandler(Filters.voice, audio_file_handler))

@@ -1,73 +1,9 @@
 from unittest.mock import Mock
-import pytest
 
 import src.main
 from src.exceptions import TrackNotFound
+from src.main import audio_file_handler_button, audio_file_handler
 from src.models import File, Action, ShazamTrack
-from src.main import url_handler, audio_file_handler_button, audio_file_handler
-
-
-def test_url_handler(mocker):
-    """Test url handler. Should detect youtube links accordingly."""
-
-    url = "https://www.youtube.com/watch?v=W2TE0DjdNqI&ab_channel=PorterRobinsonVEVO"
-    url2 = "porter|https://www.youtube.com/watch?v=W2TE0DjdNqI&ab_channel=PorterRobinsonVEVO"
-
-    # Update mock
-    message_mock = Mock()
-    message_mock.text = url
-    message_mock.reply_text.return_value = None
-
-    update_mock = Mock()
-    update_mock.message = message_mock
-
-    # Youtube callback
-    youtube_callback = Mock()
-
-    # Callback mockmoc
-    callback_mock = Mock()
-
-    mocker.patch.object(src.main, "youtube_callback", youtube_callback)
-
-    # Run #1
-    url_handler(update_mock, callback_mock)
-    youtube_callback.assert_called_once()
-
-    # Run #2
-    message2_mock = Mock()
-    message2_mock.text = url2
-    message2_mock.reply_text.return_value = None
-
-    update_mock.message = message2_mock
-
-    url_handler(update_mock, callback_mock)
-    youtube_callback.assert_called()
-
-
-def test_url_handler_invalid(mocker):
-    """Test url handler. Errors because the link is not supported."""
-
-    url = "https://www.google.com/"
-
-    # Update mock
-    message_mock = Mock()
-    message_mock.text = url
-
-    update_mock = Mock()
-    update_mock.message = message_mock
-
-    # Youtube callback
-    youtube_callback = Mock()
-
-    # Callback mock
-    callback_mock = Mock()
-
-    mocker.patch.object(src.main, "youtube_callback", youtube_callback)
-
-    url_handler(update_mock, callback_mock)
-
-    # Assertions
-    assert "We are yet to support URLs from this place." in update_mock.message.reply_text.call_args[0][0]
 
 
 def test_audio_file_handler_button_shazam(mocker):

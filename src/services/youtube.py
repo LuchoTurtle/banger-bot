@@ -1,71 +1,54 @@
-import logging
 import re
-
 import magic
 import youtube_dl
-from telegram import Update, ParseMode
-from telegram.ext import CallbackContext
 
 from src.definitions.definitions import FILES_DIR
-from src.services.gdrive import upload_to_drive
+from src.exceptions import YoutubeAudioDownloadFail
+from src.models import YoutubeTrack
 
-logger = logging.getLogger("BangerBot")
 
-
-def url_is_valid(update: Update, context: CallbackContext, url: str) -> bool:
-    youtube_pattern = re.compile(
+def url_is_youtube_valid(url: str):
+    """
+    Validates if it is a proper youtube video and not a channel link or something.
+    @param url: string to be verified.
+    @return: returns if it's a valid youtube video link downloadable by Youtube DL.
+    """
+    pattern = re.compile(
         r"(?:https?:\/\/)?(?:youtu\.be\/|(?:www\.|m\.)?youtube\.com\/(?:watch|v|embed)(?:\.php)?(?:\?.*v=|\/))([a-zA-Z0-9\_-]+)")
-    if not bool(youtube_pattern.search(url)):
-        context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text="This URL does not point to a valid Youtube video ❌.\nAre you sure it's not a channel? 🤔",
-                                 parse_mode=ParseMode.MARKDOWN)
-        return False
-    return True
+    return pattern.search(url)
 
 
-def youtube_callback(update: Update, context: CallbackContext, url: str, tag: str = None) -> None:
-    if url_is_valid(update, context, url):
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '320',
-            }],
-            'outtmpl': FILES_DIR + '%(id)s.%(ext)s'         # filepath is files/ID.mp3
-        }
-        try:
-            with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-                context.bot.send_message(chat_id=update.effective_chat.id,
-                                         text="Got it! ✅\nGoing to download the file now and try to upload it to Google Drive. Gimme a few seconds!",
-                                         parse_mode=ParseMode.MARKDOWN)
+def download_youtube_audio(url: str) -> YoutubeTrack:
+    """
+    Downloads audio from youtube video link.
+    @param url: youtube URL
+    @return: YoutubeTrack containing information about the downloaded file and audio track.
+    """
 
-                # Download and get file info
-                info = ydl.extract_info(url, download=True)
+    # YoutubeDL options (best quality possible mp3 and outputting to files directory "files/ID.mp3")
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '320',
+        }],
+        'outtmpl': FILES_DIR + '%(id)s.%(ext)s'
+    }
 
-                title = info['title']
-                video_id = info['id']
+    try:
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            # Download and get file info
+            info = ydl.extract_info(url, download=True)
 
-                filepath = FILES_DIR + video_id + '.mp3'
-                mime = magic.Magic(mime=True)
-                mimetype = mime.from_file(filepath)
+            title = info['title']
+            video_id = info['id']
 
-                try:
-                    # Upload to GDrive
-                    upload_to_drive(filepath, title, mimetype, tag)
+            filepath = FILES_DIR + video_id + '.mp3'
+            mime = magic.Magic(mime=True)
+            mimetype = mime.from_file(filepath)
 
-                    # Send confirmation message
-                    context.bot.send_message(chat_id=update.effective_chat.id,
-                                             text="Your song *" + title + "* has been uploaded ✅",
-                                             parse_mode=ParseMode.MARKDOWN)
-                except Exception:
-                    logger.log(level=logging.ERROR, msg="Error uploading file to Google Drive.\n")
-                    context.bot.send_message(chat_id=update.effective_chat.id,
-                                             text="There was an error uploading this file to Google Drive ❌.\nHave you set up everything correctly? 🤔",
-                                             parse_mode=ParseMode.MARKDOWN)
+    except Exception:
+        raise YoutubeAudioDownloadFail
 
-        except Exception as e:
-            logger.log(level=logging.ERROR, msg="Error downloading youtube file.\n")
-            context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text="There was an error downloading this Youtube video ❌.\nHave you checked if it's available? 🤔",
-                                     parse_mode=ParseMode.MARKDOWN)
+    return YoutubeTrack(title=title, video_id=video_id, filepath=filepath, mimetype=mimetype)

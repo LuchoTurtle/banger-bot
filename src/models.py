@@ -40,3 +40,12 @@ class ShazamTrack:
             }
         except KeyError:
             raise TrackNotFound
+
+
+@dataclass
+class YoutubeTrack:
+    title: str
+    video_id: str
+    filepath: str
+    mimetype: str
+
