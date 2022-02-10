@@ -1,10 +1,10 @@
 from unittest.mock import Mock
-import pytest
 
-import src.main
-from src.exceptions import TrackNotFound
-from src.models import File, Action, ShazamTrack
-from src.main import start, help_command, url_handler, audio_file_handler_button, audio_file_handler
+from src.exceptions import YoutubeAudioDownloadFail, GoogleDriveUploadFail, TrackNotFound
+from src.models import YoutubeTrack, File, Action, ShazamTrack
+from src.main import start_handler, help_handler
+import src.handlers
+from src.handlers import url_handler, audio_file_handler_button, audio_file_handler
 
 
 def test_start():
@@ -20,7 +20,7 @@ def test_start():
     # Callback mock
     callback_mock = Mock()
 
-    start(update_mock, callback_mock)
+    start_handler(update_mock, callback_mock)
 
     assert update_mock.message.reply_text.called is True
     assert "Welcome" in update_mock.message.reply_text.call_args[0][0]
@@ -39,17 +39,17 @@ def test_help():
     # Callback mock
     callback_mock = Mock()
 
-    help_command(update_mock, callback_mock)
+    help_handler(update_mock, callback_mock)
 
     assert update_mock.message.reply_text.called is True
     assert "help" in update_mock.message.reply_text.call_args[0][0]
 
 
+# URL handler tests ------------
 def test_url_handler(mocker):
     """Test url handler. Should detect youtube links accordingly."""
 
     url = "https://www.youtube.com/watch?v=W2TE0DjdNqI&ab_channel=PorterRobinsonVEVO"
-    url2 = "porter|https://www.youtube.com/watch?v=W2TE0DjdNqI&ab_channel=PorterRobinsonVEVO"
 
     # Update mock
     message_mock = Mock()
@@ -59,55 +59,207 @@ def test_url_handler(mocker):
     update_mock = Mock()
     update_mock.message = message_mock
 
-    # Youtube callback
-    youtube_callback = Mock()
+    # Context mock
+    msg_mock = Mock()
+    msg_mock.edit_text.return_value = None
 
-    # Callback mockmoc
-    callback_mock = Mock()
+    bot_mock = Mock()
+    bot_mock.send_message.return_value = msg_mock
 
-    mocker.patch.object(src.main, "youtube_callback", youtube_callback)
+    context_mock = Mock()
+    context_mock.bot = bot_mock
+
+    # Youtube audio download mock
+    youtube_track = YoutubeTrack("sample", "sample", "filepath", "audio/mpeg")
+    download_youtube_audio_mock = Mock()
+    download_youtube_audio_mock.return_value = youtube_track
+
+    # Google drive mock
+    drive_mock = Mock()
+
+    mocker.patch.object(src.handlers, "download_youtube_audio", download_youtube_audio_mock)
+    mocker.patch.object(src.handlers, "upload_to_drive", drive_mock)
 
     # Run #1
-    url_handler(update_mock, callback_mock)
-    youtube_callback.assert_called_once()
+    url_handler(update_mock, context_mock)
+    download_youtube_audio_mock.assert_called_once()
+    drive_mock.assert_called_once()
 
     # Run #2
-    message2_mock = Mock()
-    message2_mock.text = url2
-    message2_mock.reply_text.return_value = None
 
-    update_mock.message = message2_mock
+    url2 = "porter|https://www.youtube.com/watch?v=W2TE0DjdNqI&ab_channel=PorterRobinsonVEVO"
 
-    url_handler(update_mock, callback_mock)
-    youtube_callback.assert_called()
-
-
-def test_url_handler_invalid(mocker):
-    """Test url handler. Errors because the link is not supported."""
-
-    url = "https://www.google.com/"
-
-    # Update mock
     message_mock = Mock()
-    message_mock.text = url
+    message_mock.text = url2
+    message_mock.reply_text.return_value = None
 
     update_mock = Mock()
     update_mock.message = message_mock
 
-    # Youtube callback
-    youtube_callback = Mock()
-
-    # Callback mock
-    callback_mock = Mock()
-
-    mocker.patch.object(src.main, "youtube_callback", youtube_callback)
-
-    url_handler(update_mock, callback_mock)
-
-    # Assertions
-    assert "We are yet to support URLs from this place." in update_mock.message.reply_text.call_args[0][0]
+    url_handler(update_mock, context_mock)
+    download_youtube_audio_mock.assert_called()
+    drive_mock.assert_called()
 
 
+def test_url_handler_invalid_youtube_link(mocker):
+    """Passed linked is invalid."""
+
+    url_channel = "https://www.youtube.com/c/porterrobinson"
+
+    # Update mock
+    message_mock = Mock()
+    message_mock.text = url_channel
+    message_mock.reply_text.return_value = None
+
+    update_mock = Mock()
+    update_mock.message = message_mock
+
+    # Context mock
+    msg_mock = Mock()
+    msg_mock.edit_text.return_value = None
+
+    bot_mock = Mock()
+    bot_mock.send_message.return_value = msg_mock
+
+    context_mock = Mock()
+    context_mock.bot = bot_mock
+
+    # Youtube audio download mock
+    youtube_track = YoutubeTrack("sample", "sample", "filepath", "audio/mpeg")
+    download_youtube_audio_mock = Mock()
+    download_youtube_audio_mock.return_value = youtube_track
+
+    # Google drive mock
+    drive_mock = Mock()
+
+    mocker.patch.object(src.handlers, "download_youtube_audio", download_youtube_audio_mock)
+    mocker.patch.object(src.handlers, "upload_to_drive", drive_mock)
+
+    # Run
+    url_handler(update_mock, context_mock)
+    assert update_mock.message.reply_text.call_args[0][0] == "This URL does not point to a valid Youtube video ❌."
+
+
+def test_url_handler_error_audio_download(mocker):
+    """Errors on youtube audio download."""
+
+    url = "https://www.youtube.com/watch?v=W2TE0DjdNqI&ab_channel=PorterRobinsonVEVO"
+
+    # Update mock
+    message_mock = Mock()
+    message_mock.text = url
+    message_mock.reply_text.return_value = None
+
+    update_mock = Mock()
+    update_mock.message = message_mock
+
+    # Context mock
+    msg_mock = Mock()
+    msg_mock.edit_text.return_value = None
+
+    bot_mock = Mock()
+    bot_mock.send_message.return_value = msg_mock
+
+    context_mock = Mock()
+    context_mock.bot = bot_mock
+
+    # Youtube audio download mock
+    youtube_track = YoutubeTrack("sample", "sample", "filepath", "audio/mpeg")
+    download_youtube_audio_mock = Mock()
+    download_youtube_audio_mock.side_effect = YoutubeAudioDownloadFail
+
+    # Google drive mock
+    drive_mock = Mock()
+
+    mocker.patch.object(src.handlers, "download_youtube_audio", download_youtube_audio_mock)
+    mocker.patch.object(src.handlers, "upload_to_drive", drive_mock)
+
+    # Run
+    url_handler(update_mock, context_mock)
+    assert msg_mock.edit_text.call_args[0][0] == "There was a problem downloading the audio from this Youtube link ❌."
+
+
+def test_url_handler_drive_error(mocker):
+    """Google drive error uploading."""
+
+    url = "https://www.youtube.com/watch?v=W2TE0DjdNqI&ab_channel=PorterRobinsonVEVO"
+
+    # Update mock
+    message_mock = Mock()
+    message_mock.text = url
+    message_mock.reply_text.return_value = None
+
+    update_mock = Mock()
+    update_mock.message = message_mock
+
+    # Context mock
+    msg_mock = Mock()
+    msg_mock.edit_text.return_value = None
+
+    bot_mock = Mock()
+    bot_mock.send_message.return_value = msg_mock
+
+    context_mock = Mock()
+    context_mock.bot = bot_mock
+
+    # Youtube audio download mock
+    youtube_track = YoutubeTrack("sample", "sample", "filepath", "audio/mpeg")
+    download_youtube_audio_mock = Mock()
+    download_youtube_audio_mock.return_value = youtube_track
+
+    # Google drive mock
+    drive_mock = Mock()
+    drive_mock.side_effect = GoogleDriveUploadFail
+
+    mocker.patch.object(src.handlers, "download_youtube_audio", download_youtube_audio_mock)
+    mocker.patch.object(src.handlers, "upload_to_drive", drive_mock)
+
+    # Run
+    url_handler(update_mock, context_mock)
+    assert msg_mock.edit_text.call_args[0][0] == "We managed to download the audio but failed to upload on Google Drive ❌."
+
+
+def test_url_handler_unsupported_provider(mocker):
+    """Unsupported provider."""
+
+    url = "https://www.google.com"
+
+    # Update mock
+    message_mock = Mock()
+    message_mock.text = url
+    message_mock.reply_text.return_value = None
+
+    update_mock = Mock()
+    update_mock.message = message_mock
+
+    # Context mock
+    msg_mock = Mock()
+    msg_mock.edit_text.return_value = None
+
+    bot_mock = Mock()
+    bot_mock.send_message.return_value = msg_mock
+
+    context_mock = Mock()
+    context_mock.bot = bot_mock
+
+    # Youtube audio download mock
+    youtube_track = YoutubeTrack("sample", "sample", "filepath", "audio/mpeg")
+    download_youtube_audio_mock = Mock()
+    download_youtube_audio_mock.return_value = youtube_track
+
+    # Google drive mock
+    drive_mock = Mock()
+    drive_mock.side_effect = GoogleDriveUploadFail
+
+    mocker.patch.object(src.handlers, "download_youtube_audio", download_youtube_audio_mock)
+    mocker.patch.object(src.handlers, "upload_to_drive", drive_mock)
+
+    # Run
+    url_handler(update_mock, context_mock)
+    assert update_mock.message.reply_text.call_args[0][0] == "We are yet to support URLs from this place 😕."
+
+
+# Inline query audio files
 def test_audio_file_handler_button_shazam(mocker):
     """Test callback handler when user presses button when file is sent (for Shazam)"""
 
@@ -163,7 +315,7 @@ def test_audio_file_handler_button_shazam(mocker):
     asyncio_mock = Mock()
     asyncio_mock.run.return_value = return_track
 
-    mocker.patch.object(src.main, "asyncio", asyncio_mock)
+    mocker.patch.object(src.handlers, "asyncio", asyncio_mock)
 
     audio_file_handler_button(update_mock, callback_mock)
 
@@ -227,7 +379,7 @@ def test_audio_file_handler_button_shazam_error(mocker):
     asyncio_mock = Mock()
     asyncio_mock.run.side_effect = TrackNotFound
 
-    mocker.patch.object(src.main, "asyncio", asyncio_mock)
+    mocker.patch.object(src.handlers, "asyncio", asyncio_mock)
 
     audio_file_handler_button(update_mock, callback_mock)
 
@@ -268,7 +420,7 @@ def test_audio_file_handler_button_google_drive(mocker):
     # Google drive
     upload_to_drive_mock = Mock()
 
-    mocker.patch.object(src.main, "upload_to_drive", upload_to_drive_mock)
+    mocker.patch.object(src.handlers, "upload_to_drive", upload_to_drive_mock)
 
     audio_file_handler_button(update_mock, callback_mock)
 
