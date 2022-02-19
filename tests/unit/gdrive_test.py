@@ -63,8 +63,11 @@ def mocked_build() -> Mock:
     Mocks Google service upload object.
     @return: mocked Google service upload object.
     """
+    status_mock = Mock()
+    status_mock.progress.return_value = 0.1
+
     mock_request = Mock()
-    mock_request.next_chunk.return_value = ("status", "response")
+    mock_request.next_chunk.return_value = (status_mock, "response")
     mock_request.execute.return_value = {
         'id': "random_folder_id_123"
     }
@@ -175,14 +178,18 @@ def test_creds_relogin(mocker: MockerFixture):
 
 def test_upload_file_not_found():
     """Erroring when given file path does not point to a valid object."""
+
+    mock_message = Mock()
     with pytest.raises(FileDoesNotExist):
-        upload_to_drive("", "", "")
+        upload_to_drive("", "", mock_message, "")
 
 
 def test_upload_filemeta_invalid():
     """Erroring when given file metadata are empty."""
+
+    mock_message = Mock()
     with pytest.raises(GoogleDriveInvalidFileMeta):
-        upload_to_drive(AUTH_DIR, "", "")
+        upload_to_drive(AUTH_DIR, "", mock_message, "")
 
 
 def test_upload_file_error(mocker):
@@ -193,9 +200,10 @@ def test_upload_file_error(mocker):
     mock_media.side_effect = Exception("fail")
     mocker.patch.object(src.services.gdrive, "build", mock_build)
     mocker.patch.object(src.services.gdrive, "MediaFileUpload", mock_media)
+    mock_message = Mock()
 
     with pytest.raises(GoogleDriveUploadFail):
-        upload_to_drive(AUTH_DIR, "test_file", "audio/mpeg")
+        upload_to_drive(AUTH_DIR, "test_file", "audio/mpeg", mock_message)
 
 
 def test_upload_file_normal(mocker: MockerFixture):
@@ -208,6 +216,7 @@ def test_upload_file_normal(mocker: MockerFixture):
     mock_create_folder.return_value = "id_123"
     mock_get_drive_folder = Mock()
     mock_get_drive_folder.return_value = "id_123"
+    mock_message = Mock()
 
     mocker.patch.object(src.services.gdrive, "build", mock_build)
     mocker.patch.object(src.services.gdrive, "MediaFileUpload", mock_media)
@@ -217,7 +226,7 @@ def test_upload_file_normal(mocker: MockerFixture):
 
     # Running and asserts
     with patch("os.remove"):
-        upload_to_drive(AUTH_DIR, "mo_bamba", "audio/mpeg")
+        upload_to_drive(AUTH_DIR, "mo_bamba", "audio/mpeg", mock_message)
 
     mock_build.assert_called_once()
     mock_media.assert_called_once()
@@ -226,6 +235,7 @@ def test_upload_file_normal(mocker: MockerFixture):
     mock_build.return_value.files.return_value.create.return_value.next_chunk.assert_called_once()
     mock_media.return_value.stream.assert_called_once()
     mock_media.return_value.stream.return_value.close.assert_called_once()
+    mock_message.edit_text.assert_called()
 
 
 def test_upload_file_normal_create_folder(mocker: MockerFixture):
@@ -238,6 +248,7 @@ def test_upload_file_normal_create_folder(mocker: MockerFixture):
     mock_create_folder.return_value = "id_123"
     mock_get_drive_folder = Mock()
     mock_get_drive_folder.return_value = None
+    mock_message = Mock()
 
     mocker.patch.object(src.services.gdrive, "build", mock_build)
     mocker.patch.object(src.services.gdrive, "MediaFileUpload", mock_media)
@@ -247,7 +258,7 @@ def test_upload_file_normal_create_folder(mocker: MockerFixture):
 
     # Running and asserts
     with patch("os.remove"):
-        upload_to_drive(AUTH_DIR, "mo_bamba", "audio/mpeg", "tag")
+        upload_to_drive(AUTH_DIR, "mo_bamba", "audio/mpeg", mock_message, destination_folder="tag")
 
     mock_build.assert_called_once()
     mock_media.assert_called_once()
@@ -256,8 +267,8 @@ def test_upload_file_normal_create_folder(mocker: MockerFixture):
     mock_build.return_value.files.return_value.create.return_value.next_chunk.assert_called_once()
     mock_media.return_value.stream.assert_called_once()
     mock_media.return_value.stream.return_value.close.assert_called_once()
-
     mock_create_folder.assert_called_once()
+    mock_message.edit_text.assert_called()
 
 
 # Create folder --------------------------------------

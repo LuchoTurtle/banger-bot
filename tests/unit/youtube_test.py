@@ -26,6 +26,8 @@ def test_url_is_valid():
 def test_download_audio_normal(mocker):
     """Normal callback behaviour"""
 
+    message_mock = Mock()
+
     # Youtube
     ydl_mock = Mock()
     ydl_mock.extract_info.return_value = {
@@ -36,7 +38,7 @@ def test_download_audio_normal(mocker):
     # Mock and execute the function
     mocker.patch('youtube_dl.YoutubeDL').return_value.__enter__.return_value = ydl_mock
 
-    youtube_track = download_youtube_audio("https://www.youtube.com/watch?v=cdHdPu4JqSE&list=RDrtoBmxLCGek&index=15")
+    youtube_track = download_youtube_audio("https://www.youtube.com/watch?v=cdHdPu4JqSE&list=RDrtoBmxLCGek&index=15", message_mock)
 
     # Asserts
     ydl_mock.extract_info.assert_called_once()
@@ -46,6 +48,8 @@ def test_download_audio_normal(mocker):
 
 def test_error_downloading_audio(mocker):
     """Errors because there was a problem downloading Youtube file"""
+
+    message_mock = Mock()
 
     # Youtube
     ydl_mock = Mock()
@@ -57,4 +61,4 @@ def test_error_downloading_audio(mocker):
     mocker.patch('youtube_dl.YoutubeDL').return_value.__enter__.side_effect = Exception
 
     with pytest.raises(YoutubeAudioDownloadFail):
-        download_youtube_audio("https://www.youtube.com/watch?v=cdHdPu4JqSE&list=RDrtoBmxLCGek&index=15")
+        download_youtube_audio("https://www.youtube.com/watch?v=cdHdPu4JqSE&list=RDrtoBmxLCGek&index=15", message_mock)
