@@ -6,7 +6,6 @@ from telegram.ext import (
     CallbackContext
 )
 
-
 from src.exceptions import YoutubeAudioDownloadFail, GoogleDriveUploadFail
 from src.services.gdrive import upload_to_drive
 from src.services.youtube import url_is_youtube_valid, download_youtube_audio
@@ -73,28 +72,32 @@ def url_handler(update: Update, context: CallbackContext) -> None:
 
             # Check if it is a video that can be downloaded
             if not url_is_youtube_valid(url):
-                update.message.reply_text("This URL does not point to a valid Youtube video ❌.", parse_mode=ParseMode.MARKDOWN)
+                update.message.reply_text("This URL does not point to a valid Youtube video ❌.",
+                                          parse_mode=ParseMode.MARKDOWN)
                 return
 
             # Begin download
             msg = context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text="Got it!\nGoing to download the file now and try to upload it to Google Drive. Gimme a few seconds ⌛!",
-                                     parse_mode=ParseMode.MARKDOWN)
+                                           text="Got it! Going to download the file now and try to upload it to Google Drive. Gimme a few seconds ⌛!",
+                                           parse_mode=ParseMode.MARKDOWN)
 
             try:
-                track = download_youtube_audio(url)
+                track = download_youtube_audio(url, msg)
             except YoutubeAudioDownloadFail:
-                msg.edit_text("There was a problem downloading the audio from this Youtube link ❌.", parse_mode=ParseMode.MARKDOWN)
+                msg.edit_text("There was a problem downloading the audio from this Youtube link ❌.",
+                              parse_mode=ParseMode.MARKDOWN)
                 return
 
             # Upload to Google Drive
             try:
-                upload_to_drive(track.filepath, track.title, track.mimetype, tag)
+                upload_to_drive(track.filepath, track.title, track.mimetype, msg, tag)
             except GoogleDriveUploadFail:
-                msg.edit_text("We managed to download the audio but failed to upload on Google Drive ❌.", parse_mode=ParseMode.MARKDOWN)
+                msg.edit_text("We managed to download the audio but failed to upload on Google Drive ❌.",
+                              parse_mode=ParseMode.MARKDOWN)
                 return
 
-            update.message.reply_text("Your song *" + track.title + "* has been uploaded ✅.", parse_mode=ParseMode.MARKDOWN)
+            update.message.reply_text("Your song *" + track.title + "* has been uploaded ✅.",
+                                      parse_mode=ParseMode.MARKDOWN)
 
         # Other providers ------
         else:

@@ -1,6 +1,9 @@
 import re
 import magic
 import youtube_dl
+import os
+
+from telegram import Message, ParseMode
 
 from src.definitions.definitions import FILES_DIR
 from src.exceptions import YoutubeAudioDownloadFail
@@ -18,12 +21,25 @@ def url_is_youtube_valid(url: str):
     return pattern.search(url)
 
 
-def download_youtube_audio(url: str) -> YoutubeTrack:
+def download_youtube_audio(url: str, message: Message) -> YoutubeTrack:
     """
-    Downloads audio from youtube video link.
+    Downloads audio from youtube video link. Alters message sent to show the progress of the download.
     @param url: youtube URL
+    @param message: message object to update the message with progress.
     @return: YoutubeTrack containing information about the downloaded file and audio track.
     """
+
+    def progress_hook(d):
+        if d['status'] == 'finished':
+            message.edit_text(
+                "Got it! Going to download the file now and try to upload it to Google Drive. Gimme a few seconds ⌛!\n"
+                "Done downloading from Youtube!",
+                parse_mode=ParseMode.MARKDOWN)
+        if d['status'] == 'downloading':
+            message.edit_text(
+                "Got it! Going to download the file now and try to upload it to Google Drive. Gimme a few seconds ⌛!\n"
+                "Downloading from Youtube: " + d['_percent_str'],
+                parse_mode=ParseMode.MARKDOWN)
 
     # YoutubeDL options (best quality possible mp3 and outputting to files directory "files/ID.mp3")
     ydl_opts = {
@@ -33,6 +49,7 @@ def download_youtube_audio(url: str) -> YoutubeTrack:
             'preferredcodec': 'mp3',
             'preferredquality': '320',
         }],
+        'progress_hooks': [progress_hook],
         'outtmpl': FILES_DIR + '%(id)s.%(ext)s'
     }
 
@@ -48,7 +65,7 @@ def download_youtube_audio(url: str) -> YoutubeTrack:
             mime = magic.Magic(mime=True)
             mimetype = mime.from_file(filepath)
 
-    except Exception:
+    except Exception as e:
         raise YoutubeAudioDownloadFail
 
     return YoutubeTrack(title=title, video_id=video_id, filepath=filepath, mimetype=mimetype)

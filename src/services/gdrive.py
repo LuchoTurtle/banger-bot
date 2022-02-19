@@ -6,6 +6,7 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
+from telegram import Message, ParseMode
 
 from src.definitions.definitions import AUTH_DIR
 
@@ -107,7 +108,18 @@ def get_drive_folder(folder_name: str):
     return folder_id
 
 
-def upload_to_drive(file_path: str, file_title: str, file_mime_type: str, destination_folder: str = None):
+def upload_to_drive(file_path: str, file_title: str, file_mime_type: str, message: Message, destination_folder: str = None):
+    """
+    Uploads file from 'file_path' to google drive on a given destination folder. If no destination folder is given, it uploads to root Google Drive folder.
+    If the folder is given and not created on Google Drive, it's created before upload.
+    Telegram message is passed to update the progress whilst uploading.
+    @param file_path: path to the file to be uploaded.
+    @param file_title: title of the file.
+    @param file_mime_type: mimetype of the file.
+    @param message: Telegram message object.
+    @param destination_folder: Drive destination folder.
+    @return:
+    """
 
     # Verifying params
     if not os.path.exists(file_path):
@@ -143,9 +155,21 @@ def upload_to_drive(file_path: str, file_title: str, file_mime_type: str, destin
         response = None
         while response is None:
             status, response = request.next_chunk()
+            if status:
+                progress = int(status.progress() * 100)
+                message.edit_text(
+                    "Got it! Going to download the file now and try to upload it to Google Drive. Gimme a few seconds ⌛!\n"
+                    "Uploading to Google Drive: " + str(progress) + "%",
+                    parse_mode=ParseMode.MARKDOWN)
 
         # Release media stream to so the process can delete it afterwards
         media.stream().close()
+
+        # Notify user upload is complete
+        message.edit_text(
+            "Got it! Going to download the file now and try to upload it to Google Drive. Gimme a few seconds ⌛!\n"
+            "Uploading to Google Drive complete!",
+            parse_mode=ParseMode.MARKDOWN)
 
         # Delete uploaded file locally
         os.remove(file_path)
