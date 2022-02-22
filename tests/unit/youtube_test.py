@@ -32,6 +32,7 @@ def test_download_audio_normal(mocker):
     ydl_mock = Mock()
     ydl_mock.extract_info.return_value = {
         "title": "sample",
+        "channel": "Porter Robinson",
         "id": "sample"
     }
 

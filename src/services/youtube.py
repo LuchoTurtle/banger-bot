@@ -1,13 +1,13 @@
 import re
 import magic
 import youtube_dl
-import os
 
 from telegram import Message, ParseMode
 
 from src.definitions.definitions import FILES_DIR
 from src.exceptions import YoutubeAudioDownloadFail
 from src.models import YoutubeTrack
+from src.utils import set_file_metadata
 
 
 def url_is_youtube_valid(url: str):
@@ -61,9 +61,13 @@ def download_youtube_audio(url: str, message: Message) -> YoutubeTrack:
             title = info['title']
             video_id = info['id']
 
+            # Getting mimetype
             filepath = FILES_DIR + video_id + '.mp3'
             mime = magic.Magic(mime=True)
             mimetype = mime.from_file(filepath)
+
+            # Changing metadata
+            set_file_metadata(filepath=filepath, title=title, artist=info['channel'])
 
     except Exception as e:
         raise YoutubeAudioDownloadFail
