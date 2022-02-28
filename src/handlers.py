@@ -47,6 +47,9 @@ def url_handler(update: Update, context: CallbackContext) -> None:
     # TODO Organize code, get more detailed metadata from URLs
     # TODO create filter for known providers : Spotify, Apple Music, SoundCloud, etc
 
+    #TODO metadata tags
+    #xxx(?P<metadata>(&&\s{0,}folder:.{0,})?)
+
     # Provider patterns
     youtube_pattern = re.compile("(?:https?:\/\/)?(?:youtu\.be\/|(?:www\.|m\.)?youtube\.com\/?)")
 
