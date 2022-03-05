@@ -87,7 +87,7 @@ def test_url_handler(mocker):
 
     # Run #2
 
-    url2 = "porter|https://www.youtube.com/watch?v=W2TE0DjdNqI&ab_channel=PorterRobinsonVEVO"
+    url2 = "https://www.youtube.com/watch?v=W2TE0DjdNqI&ab_channel=PorterRobinsonVEVO && folder:porter"
 
     message_mock = Mock()
     message_mock.text = url2

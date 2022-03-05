@@ -44,8 +44,19 @@ class ShazamTrack:
 
 @dataclass
 class YoutubeTrack:
-    title: str
+    file_title: str
     video_id: str
     filepath: str
     mimetype: str
 
+
+@dataclass
+class Metadata:
+    url: str
+    artist: str
+    year: int
+    track: int
+    genre: str
+    album: str
+    title: str
+    folder: str

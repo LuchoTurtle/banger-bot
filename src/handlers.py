@@ -10,9 +10,10 @@ from src.exceptions import YoutubeAudioDownloadFail, GoogleDriveUploadFail
 from src.services.gdrive import upload_to_drive
 from src.services.youtube import url_is_youtube_valid, download_youtube_audio
 
-from src.models import File, Action, ShazamTrack
+from src.models import File, Action, ShazamTrack, Metadata
 from src.services.shazam import shazam
 from src.exceptions import TrackNotFound
+from src.utils import get_metadata_from_message
 
 
 def start_handler(update: Update, context: CallbackContext) -> None:
@@ -23,7 +24,7 @@ Detect songs from Youtube and upload them. You can also Shazam it!
 Enjoy your music with your friends! 🎉 
     """, parse_mode=ParseMode.MARKDOWN)
 
-
+#TODO adding help to regex, shazam
 def help_handler(update: Update, context: CallbackContext) -> None:
     update.message.reply_text("""
 *We're here to help!* 😀\n
@@ -47,34 +48,19 @@ def url_handler(update: Update, context: CallbackContext) -> None:
     # TODO Organize code, get more detailed metadata from URLs
     # TODO create filter for known providers : Spotify, Apple Music, SoundCloud, etc
 
-    #TODO metadata tags
-    #xxx(?P<metadata>(&&\s{0,}folder:.{0,})?)
-
     # Provider patterns
     youtube_pattern = re.compile("(?:https?:\/\/)?(?:youtu\.be\/|(?:www\.|m\.)?youtube\.com\/?)")
 
     # Regex for the tag and url ( text <tag> <url>)
-    tag_regex = r".*\|"
-    url_regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
+    message_metadata: Metadata = get_metadata_from_message(update.message.text)
 
-    # Checking if we match a tag and url
-    url_match = re.search(url_regex, update.message.text)
-    tag_match = re.search(tag_regex, update.message.text)
-
-    if url_match:
-
-        # Get tag and url
-        tag = None
-        if tag_match:
-            tag = tag_match.group(0).replace("|", "").strip()
-
-        url = url_match.group(0)
+    if message_metadata.url:
 
         # Youtube ------
-        if bool(youtube_pattern.search(url)):
+        if bool(youtube_pattern.search(message_metadata.url)):
 
             # Check if it is a video that can be downloaded
-            if not url_is_youtube_valid(url):
+            if not url_is_youtube_valid(message_metadata.url):
                 update.message.reply_text("This URL does not point to a valid Youtube video ❌.",
                                           parse_mode=ParseMode.MARKDOWN)
                 return
@@ -85,7 +71,7 @@ def url_handler(update: Update, context: CallbackContext) -> None:
                                            parse_mode=ParseMode.MARKDOWN)
 
             try:
-                track = download_youtube_audio(url, msg)
+                track = download_youtube_audio(message_metadata, msg)
             except YoutubeAudioDownloadFail:
                 msg.edit_text("There was a problem downloading the audio from this Youtube link ❌.",
                               parse_mode=ParseMode.MARKDOWN)
@@ -93,13 +79,13 @@ def url_handler(update: Update, context: CallbackContext) -> None:
 
             # Upload to Google Drive
             try:
-                upload_to_drive(track.filepath, track.title, track.mimetype, msg, tag)
+                upload_to_drive(track.filepath, track.file_title, track.mimetype, msg, message_metadata.folder)
             except GoogleDriveUploadFail:
                 msg.edit_text("We managed to download the audio but failed to upload on Google Drive ❌.",
                               parse_mode=ParseMode.MARKDOWN)
                 return
 
-            update.message.reply_text("Your song *" + track.title + "* has been uploaded ✅.",
+            update.message.reply_text("Your song *" + track.file_title + "* has been uploaded ✅.",
                                       parse_mode=ParseMode.MARKDOWN)
 
         # Other providers ------

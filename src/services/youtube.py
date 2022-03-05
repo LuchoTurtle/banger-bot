@@ -6,7 +6,7 @@ from telegram import Message, ParseMode
 
 from src.definitions.definitions import FILES_DIR
 from src.exceptions import YoutubeAudioDownloadFail
-from src.models import YoutubeTrack
+from src.models import YoutubeTrack, Metadata
 from src.utils import set_file_metadata
 
 
@@ -21,10 +21,10 @@ def url_is_youtube_valid(url: str):
     return pattern.search(url)
 
 
-def download_youtube_audio(url: str, message: Message) -> YoutubeTrack:
+def download_youtube_audio(metadata: Metadata, message: Message) -> YoutubeTrack:
     """
     Downloads audio from youtube video link. Alters message sent to show the progress of the download.
-    @param url: youtube URL
+    @param metadata: metadata object.
     @param message: message object to update the message with progress.
     @return: YoutubeTrack containing information about the downloaded file and audio track.
     """
@@ -56,7 +56,7 @@ def download_youtube_audio(url: str, message: Message) -> YoutubeTrack:
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             # Download and get file info
-            info = ydl.extract_info(url, download=True)
+            info = ydl.extract_info(metadata.url, download=True)
 
             title = info['title']
             video_id = info['id']
@@ -67,9 +67,9 @@ def download_youtube_audio(url: str, message: Message) -> YoutubeTrack:
             mimetype = mime.from_file(filepath)
 
             # Changing metadata
-            set_file_metadata(filepath=filepath, title=title, artist=info['channel'])
+            set_file_metadata(filepath=filepath, metadata=metadata)
 
     except Exception as e:
         raise YoutubeAudioDownloadFail
 
-    return YoutubeTrack(title=title, video_id=video_id, filepath=filepath, mimetype=mimetype)
+    return YoutubeTrack(file_title=title, video_id=video_id, filepath=filepath, mimetype=mimetype)

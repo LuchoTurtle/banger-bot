@@ -85,6 +85,10 @@ def get_drive_folder(folder_name: str):
     @param folder_name: name of the folder we're looking for
     @return: ID of the folder. Returns None if no folder was found.
     """
+
+    if folder_name is None:
+        return None
+
     service = build('drive', 'v3', credentials=get_creds(), cache_discovery=False)
 
     folder_id = None
@@ -108,7 +112,8 @@ def get_drive_folder(folder_name: str):
     return folder_id
 
 
-def upload_to_drive(file_path: str, file_title: str, file_mime_type: str, message: Message, destination_folder: str = None):
+def upload_to_drive(file_path: str, file_title: str, file_mime_type: str, message: Message,
+                    destination_folder: str = None):
     """
     Uploads file from 'file_path' to google drive on a given destination folder. If no destination folder is given, it uploads to root Google Drive folder.
     If the folder is given and not created on Google Drive, it's created before upload.
@@ -131,11 +136,13 @@ def upload_to_drive(file_path: str, file_title: str, file_mime_type: str, messag
     try:
         service = build('drive', 'v3', credentials=get_creds(), cache_discovery=False)
 
-        # Check if folder exists. If it does, use the ID to create folder. If not, we create a new folder
-        folder_id = get_drive_folder(destination_folder)
+        # If a destination folder is passed, we check if it exists. If not, we just push to the root directory
+        if destination_folder:
+            # Check if folder exists. If it does, use the ID to create folder. If not, we create a new folder
+            folder_id = get_drive_folder(destination_folder)
 
-        if folder_id is None:
-            folder_id = create_drive_folder(destination_folder)
+            if folder_id is None:
+                folder_id = create_drive_folder(destination_folder)
 
         if destination_folder:
             metadata = {
