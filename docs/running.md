@@ -4,8 +4,14 @@ You need to create yourself a Telegram bot. It's super easy, you can follow thes
 
 After this, you'll  have access to a Bot Token. Now you have two ways of getting the bot running!
 
-> :warning: Do not forget, you need to:
-- Setup your Google Drive account for the bot to work.
+> :warning: Do not forget, you need to
+setup your Google Drive account for the bot to work.
+Check the [Google Drive guide](./drive.md) to get started.
+>
+> It is important to have the `client_secrets.json` 
+and `token.json` files before running docker.
+To get these, you will need to run the program locally and
+authorize the application (it will open a chrome window).
 
 ## Using docker :whale: (much easier!)
 

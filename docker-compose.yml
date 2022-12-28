@@ -2,21 +2,9 @@ version: '3'
 
 services:
 
-  mongo:
-    image: mongo
-    restart: always
-    networks:
-      - bangernet
-
   bangerbot:
     build:
       context: .
       dockerfile: Dockerfile
-    networks:
-      - bangernet
     environment:
       - BOT_TOKEN=<paste your token here>
-        
-networks:
-  bangernet:
-    driver: bridge
