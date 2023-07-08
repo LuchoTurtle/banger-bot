@@ -6,7 +6,9 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from telegram import Message, ParseMode
+from telegram import Message
+from telegram.constants import ParseMode
+
 
 from src.definitions.definitions import AUTH_DIR
 
@@ -112,7 +114,7 @@ def get_drive_folder(folder_name: str):
     return folder_id
 
 
-def upload_to_drive(file_path: str, file_title: str, file_mime_type: str, message: Message,
+async def upload_to_drive(file_path: str, file_title: str, file_mime_type: str, message: Message,
                     destination_folder: str = None):
     """
     Uploads file from 'file_path' to google drive on a given destination folder. If no destination folder is given, it uploads to root Google Drive folder.
@@ -164,7 +166,7 @@ def upload_to_drive(file_path: str, file_title: str, file_mime_type: str, messag
             status, response = request.next_chunk()
             if status:
                 progress = int(status.progress() * 100)
-                message.edit_text(
+                await message.edit_text(
                     "Got it! Going to download the file now and try to upload it to Google Drive. Gimme a few seconds ⌛!\n"
                     "Uploading to Google Drive: " + str(progress) + "%",
                     parse_mode=ParseMode.MARKDOWN)
@@ -173,7 +175,7 @@ def upload_to_drive(file_path: str, file_title: str, file_mime_type: str, messag
         media.stream().close()
 
         # Notify user upload is complete
-        message.edit_text(
+        await message.edit_text(
             "Got it! Going to download the file now and try to upload it to Google Drive. Gimme a few seconds ⌛!\n"
             "Uploading to Google Drive complete!",
             parse_mode=ParseMode.MARKDOWN)

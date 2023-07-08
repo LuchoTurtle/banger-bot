@@ -1,9 +1,10 @@
 import re
 import asyncio
 
-from telegram import Update, ParseMode, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.constants import ParseMode
 from telegram.ext import (
-    CallbackContext
+    ContextTypes
 )
 
 from src.exceptions import YoutubeAudioDownloadFail, GoogleDriveUploadFail
@@ -16,8 +17,8 @@ from src.exceptions import TrackNotFound
 from src.utils import get_metadata_from_message
 
 
-def start_handler(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text(
+async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(
         """*Hi! Welcome Banger Bot!* 👋\n
 The bot is still under development but it is mainly intended for you and your friends to share music on a group chat and automatically upload it to a Google Drive folder you set up. \n
 Detect songs from Youtube and upload them. You can also Shazam it!
@@ -25,8 +26,8 @@ Enjoy your music with your friends! 🎉
     """, parse_mode=ParseMode.MARKDOWN)
 
 #TODO adding help to regex, shazam
-def help_handler(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text("""
+async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text("""
 *We're here to help!* 😀\n
 For the bot to properly work, you need a _Google Drive project set up and authorize this bot on startup to edit it_. 
 From there on, the bot will listen to relevant URLs and take care of downloading and uploading your music to Google Drive. \n
@@ -38,7 +39,7 @@ and find all the info needed there! 😊
                               parse_mode=ParseMode.MARKDOWN)
 
 
-def url_handler(update: Update, context: CallbackContext) -> None:
+async def url_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handles what to do when an URL is detected on the message. It handles Youtube links, so far.
     @param update: Update object
@@ -61,12 +62,12 @@ def url_handler(update: Update, context: CallbackContext) -> None:
 
             # Check if it is a video that can be downloaded
             if not url_is_youtube_valid(message_metadata.url):
-                update.message.reply_text("This URL does not point to a valid Youtube video ❌.",
+                await update.message.reply_text("This URL does not point to a valid Youtube video ❌.",
                                           parse_mode=ParseMode.MARKDOWN)
                 return
 
             # Begin download
-            msg = context.bot.send_message(chat_id=update.effective_chat.id,
+            msg = await context.bot.send_message(chat_id=update.effective_chat.id,
                                            text="Got it! Going to download the file now and try to upload it to Google Drive. Gimme a few seconds ⌛!",
                                            parse_mode=ParseMode.MARKDOWN)
 
@@ -85,16 +86,16 @@ def url_handler(update: Update, context: CallbackContext) -> None:
                               parse_mode=ParseMode.MARKDOWN)
                 return
 
-            update.message.reply_text("Your song *" + track.file_title + "* has been uploaded ✅.",
+            await update.message.reply_text("Your song *" + track.file_title + "* has been uploaded ✅.",
                                       parse_mode=ParseMode.MARKDOWN)
 
         # Other providers ------
         else:
-            update.message.reply_text("We are yet to support URLs from this place 😕.", parse_mode=ParseMode.MARKDOWN)
+            await update.message.reply_text("We are yet to support URLs from this place 😕.", parse_mode=ParseMode.MARKDOWN)
 
 
 # Inline query handlers ------------------
-def audio_file_handler(update: Update, context: CallbackContext) -> None:
+async def audio_file_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Function that is called whenever an audio file is sent to the chat. It creates an inline keyboard with two possible options.
     @param update: Update object of message.
@@ -147,10 +148,10 @@ def audio_file_handler(update: Update, context: CallbackContext) -> None:
     ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text('What do you want to do with this audio file?', reply_markup=reply_markup)
+    await update.message.reply_text('What do you want to do with this audio file?', reply_markup=reply_markup)
 
 
-def audio_file_handler_button(update: Update, context: CallbackContext):
+async def audio_file_handler_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Audio file inline button callback function. This function processes the action chosen.
     @param update: Update object of message.
@@ -161,39 +162,37 @@ def audio_file_handler_button(update: Update, context: CallbackContext):
     query = update.callback_query
 
     # CallbackQueries need to be answered, even if no notification to the user is needed
-    query.answer()
+    await query.answer()
 
     answer_file: File = query.data
 
     # Download file locally
-    file = context.bot.getFile(answer_file.file_id)
-    file.download(answer_file.get_file_location())
+    file = await context.bot.getFile(answer_file.file_id)
+    await file.download_to_drive(answer_file.get_file_location())
 
     # Check if the user wants to Shazam or directly upload the file to the Google Drive account
     if answer_file.action is Action.SHAZAM:
-        query.edit_message_text("Please wait while we detect the song ⌛")
+        await query.edit_message_text("Please wait while we detect the song ⌛")
 
         try:
-            track: ShazamTrack = asyncio.run(
-                shazam(answer_file, context)
-            )
+            track: ShazamTrack = await shazam(answer_file, context)
 
-            query.edit_message_text("We found a track! 🎉")
+            await query.edit_message_text("We found a track! 🎉")
 
-            context.bot.send_photo(chat_id=update.effective_chat.id,
+            await context.bot.send_photo(chat_id=update.effective_chat.id,
                                    photo=track.image,
                                    caption=f'It\'s *{track.subtitle} - {track.title}*\n',
                                    parse_mode=ParseMode.MARKDOWN)
 
         except TrackNotFound:
-            query.edit_message_text(f'Unfortunately we couldn\'t detect a song ☹')
+            await query.edit_message_text(f'Unfortunately we couldn\'t detect a song ☹')
 
     elif answer_file.action is Action.GDRIVE_UPLOAD:
-        query.edit_message_text("Please wait while we upload the song ⌛")
+        await query.edit_message_text("Please wait while we upload the song ⌛")
 
         upload_to_drive(answer_file.get_file_location(), answer_file.file_title, answer_file.mime_type)
 
-        query.edit_message_text(text=f"Song uploaded!")
+        await query.edit_message_text(text=f"Song uploaded!")
 
     else:
-        query.edit_message_text("That action is not permitted 🙁")
+        await query.edit_message_text("That action is not permitted 🙁")

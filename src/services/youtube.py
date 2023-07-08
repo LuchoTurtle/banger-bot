@@ -2,7 +2,8 @@ import re
 import magic
 import youtube_dl
 
-from telegram import Message, ParseMode
+from telegram import Message
+from telegram.constants import ParseMode
 
 from src.definitions.definitions import FILES_DIR
 from src.exceptions import YoutubeAudioDownloadFail
@@ -29,14 +30,14 @@ def download_youtube_audio(metadata: Metadata, message: Message) -> YoutubeTrack
     @return: YoutubeTrack containing information about the downloaded file and audio track.
     """
 
-    def progress_hook(d):
+    async def progress_hook(d):
         if d['status'] == 'finished':
-            message.edit_text(
+            await message.edit_text(
                 "Got it! Going to download the file now and try to upload it to Google Drive. Gimme a few seconds ⌛!\n"
                 "Done downloading from Youtube!",
                 parse_mode=ParseMode.MARKDOWN)
         if d['status'] == 'downloading':
-            message.edit_text(
+            await message.edit_text(
                 "Got it! Going to download the file now and try to upload it to Google Drive. Gimme a few seconds ⌛!\n"
                 "Downloading from Youtube: " + d['_percent_str'],
                 parse_mode=ParseMode.MARKDOWN)

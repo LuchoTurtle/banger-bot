@@ -1,10 +1,10 @@
 from decouple import config
 from telegram.ext import (
-    Updater,
+    Application,
     CommandHandler,
     MessageHandler,
     CallbackQueryHandler,
-    Filters
+    filters
 )
 
 from src.handlers import start_handler, help_handler, url_handler, audio_file_handler, audio_file_handler_button
@@ -15,21 +15,22 @@ def exec():
     """Start the bot."""
     get_creds()
 
-    # Create the Updater and get dispatcher to register handlers
-    updater = Updater(config("BOT_TOKEN"), use_context=True, arbitrary_callback_data=True)
-    dispatcher = updater.dispatcher
+
+    # Create the Updater and get application to register handlers
+    application = Application.builder().token(config("BOT_TOKEN")).arbitrary_callback_data(True).build()
+    updater = application.updater
 
     # Handlers
-    dispatcher.add_handler(CommandHandler("start", start_handler))
-    dispatcher.add_handler(CommandHandler("help", help_handler))
+    application.add_handler(CommandHandler("start", start_handler))
+    application.add_handler(CommandHandler("help", help_handler))
 
-    dispatcher.add_handler(MessageHandler(Filters.audio, audio_file_handler))
-    dispatcher.add_handler(MessageHandler(Filters.voice, audio_file_handler))
-    updater.dispatcher.add_handler(CallbackQueryHandler(audio_file_handler_button))
+    application.add_handler(MessageHandler(filters.AUDIO, audio_file_handler))
+    application.add_handler(MessageHandler(filters.VOICE, audio_file_handler))
+    application.add_handler(CallbackQueryHandler(audio_file_handler_button))
 
-    dispatcher.add_handler(MessageHandler(Filters.entity("url"), url_handler))
+    application.add_handler(MessageHandler(filters.Entity("url"), url_handler))
 
-    updater.start_polling()
+    application.run_polling()
     updater.idle()
 
 
