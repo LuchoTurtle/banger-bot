@@ -1,6 +1,5 @@
 import re
 import magic
-import youtube_dl
 
 from telegram import Message
 from telegram.constants import ParseMode
@@ -9,6 +8,7 @@ from src.definitions.definitions import FILES_DIR
 from src.exceptions import YoutubeAudioDownloadFail
 from src.models import YoutubeTrack, Metadata
 from src.utils import set_file_metadata
+from yt_dlp import YoutubeDL
 
 
 def url_is_youtube_valid(url: str):
@@ -55,7 +55,8 @@ def download_youtube_audio(metadata: Metadata, message: Message) -> YoutubeTrack
     }
 
     try:
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        with YoutubeDL(ydl_opts) as ydl:
+            
             # Download and get file info
             info = ydl.extract_info(metadata.url, download=True)
 

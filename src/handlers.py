@@ -80,7 +80,7 @@ async def url_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
             # Upload to Google Drive
             try:
-                upload_to_drive(track.filepath, track.file_title, track.mimetype, msg, message_metadata.folder)
+                await upload_to_drive(track.filepath, track.file_title, track.mimetype, msg, message_metadata.folder)
             except GoogleDriveUploadFail:
                 msg.edit_text("We managed to download the audio but failed to upload on Google Drive ❌.",
                               parse_mode=ParseMode.MARKDOWN)
