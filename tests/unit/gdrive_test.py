@@ -1,6 +1,7 @@
 import pytest
+
 from pytest_mock import MockerFixture
-from unittest.mock import Mock, mock_open, patch
+from unittest.mock import Mock, mock_open, patch, AsyncMock
 from google.oauth2.credentials import Credentials
 from googleapiclient.http import MediaFileUpload
 from datetime import datetime, timedelta
@@ -176,23 +177,25 @@ def test_creds_relogin(mocker: MockerFixture):
 
 # Upload to drive --------------------------------------
 
-def test_upload_file_not_found():
+@pytest.mark.asyncio
+async def test_upload_file_not_found():
     """Erroring when given file path does not point to a valid object."""
 
     mock_message = Mock()
     with pytest.raises(FileDoesNotExist):
-        upload_to_drive("", "", mock_message, "")
+        await upload_to_drive("", "", mock_message, "")
 
 
-def test_upload_filemeta_invalid():
+@pytest.mark.asyncio
+async def test_upload_filemeta_invalid():
     """Erroring when given file metadata are empty."""
 
     mock_message = Mock()
     with pytest.raises(GoogleDriveInvalidFileMeta):
-        upload_to_drive(AUTH_DIR, "", mock_message, "")
+        await upload_to_drive(AUTH_DIR, "", mock_message, "")
 
-
-def test_upload_file_error(mocker):
+@pytest.mark.asyncio
+async def test_upload_file_error(mocker):
     """Erroring when given there was trouble uploading file."""
     mock_build = mocked_build()
     mock_media = mocked_media()
@@ -203,10 +206,11 @@ def test_upload_file_error(mocker):
     mock_message = Mock()
 
     with pytest.raises(GoogleDriveUploadFail):
-        upload_to_drive(AUTH_DIR, "test_file", "audio/mpeg", mock_message)
+        await upload_to_drive(AUTH_DIR, "test_file", "audio/mpeg", mock_message)
 
 
-def test_upload_file_normal(mocker: MockerFixture):
+@pytest.mark.asyncio
+async def test_upload_file_normal(mocker: MockerFixture):
     """Normal flow - uploads file to Google Drive."""
 
     # Setting mocks
@@ -216,7 +220,8 @@ def test_upload_file_normal(mocker: MockerFixture):
     mock_create_folder.return_value = "id_123"
     mock_get_drive_folder = Mock()
     mock_get_drive_folder.return_value = "id_123"
-    mock_message = Mock()
+    mock_message = AsyncMock()
+    mock_message.edit_message.return_value = 1
 
     mocker.patch.object(src.services.gdrive, "build", mock_build)
     mocker.patch.object(src.services.gdrive, "MediaFileUpload", mock_media)
@@ -226,7 +231,7 @@ def test_upload_file_normal(mocker: MockerFixture):
 
     # Running and asserts
     with patch("os.remove"):
-        upload_to_drive(AUTH_DIR, "mo_bamba", "audio/mpeg", mock_message)
+        await upload_to_drive(AUTH_DIR, "mo_bamba", "audio/mpeg", mock_message)
 
     mock_build.assert_called_once()
     mock_media.assert_called_once()
@@ -238,7 +243,8 @@ def test_upload_file_normal(mocker: MockerFixture):
     mock_message.edit_text.assert_called()
 
 
-def test_upload_file_normal_create_folder(mocker: MockerFixture):
+@pytest.mark.asyncio
+async def test_upload_file_normal_create_folder(mocker: MockerFixture):
     """Normal flow - uploads file to Google Drive (and creates folder along the way)"""
 
     # Setting mocks
@@ -248,7 +254,8 @@ def test_upload_file_normal_create_folder(mocker: MockerFixture):
     mock_create_folder.return_value = "id_123"
     mock_get_drive_folder = Mock()
     mock_get_drive_folder.return_value = None
-    mock_message = Mock()
+    mock_message = AsyncMock()
+    mock_message.edit_message.return_value = 1
 
     mocker.patch.object(src.services.gdrive, "build", mock_build)
     mocker.patch.object(src.services.gdrive, "MediaFileUpload", mock_media)
@@ -258,7 +265,7 @@ def test_upload_file_normal_create_folder(mocker: MockerFixture):
 
     # Running and asserts
     with patch("os.remove"):
-        upload_to_drive(AUTH_DIR, "mo_bamba", "audio/mpeg", mock_message, destination_folder="tag")
+        await upload_to_drive(AUTH_DIR, "mo_bamba", "audio/mpeg", mock_message, destination_folder="tag")
 
     mock_build.assert_called_once()
     mock_media.assert_called_once()

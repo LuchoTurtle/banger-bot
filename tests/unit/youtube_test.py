@@ -40,7 +40,7 @@ def test_download_audio_normal(mocker):
     # Mock and execute the function
     mocker.patch('youtube_dl.YoutubeDL').return_value.__enter__.return_value = ydl_mock
 
-    metadata: Metadata = Metadata("https://www.youtube.com/watch?v=cdHdPu4JqSE&list=RDrtoBmxLCGek&index=15", "", "", "", "", "", "", "")
+    metadata: Metadata = Metadata("https://www.youtube.com/watch?v=W2TE0DjdNqI&ab_channel=PorterRobinsonVEVO", "", "", "", "", "", "", "")
 
     youtube_track = download_youtube_audio(metadata, message_mock)
 
@@ -63,7 +63,7 @@ def test_error_downloading_audio(mocker):
     }
 
     mocker.patch('youtube_dl.YoutubeDL').return_value.__enter__.side_effect = Exception
-    metadata: Metadata = Metadata("https://www.youtube.com/watch?v=cdHdPu4JqSE&list=RDrtoBmxLCGek&index=15", "", "", "", "", "", "", "")
+    metadata: Metadata = Metadata("https://www.youtube.com/watch?v=W2TE0DjdNqI&ab_channel=PorterRobinsonVEVO", "", "", "", "", "", "", "")
 
     with pytest.raises(YoutubeAudioDownloadFail):
         download_youtube_audio(metadata, message_mock)

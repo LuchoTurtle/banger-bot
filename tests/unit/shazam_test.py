@@ -37,7 +37,7 @@ def test_normal():
             shazam(file_obj, mock_context)
         )
 
-    assert track.title == 'Goodbye To A World'
+    assert track.title == 'Goodbye To a World'
     assert track.subtitle == 'Porter Robinson'
     assert track.image is not None
     assert track.first_provider is not None
