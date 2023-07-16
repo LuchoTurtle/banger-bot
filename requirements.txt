@@ -1,3 +1,5 @@
+# Run `pigar generate tests` and `pigar generate src` to get the used dependencies
+
 google_api_python_client==2.7.0
 google_auth_oauthlib==0.4.4
 mutagen==1.45.1
@@ -9,3 +11,5 @@ shazamio==0.4.0.1
 yt_dlp==2023.7.6
 coverage==6.2
 Pyrogram==1.2.20
+pytest==6.2.5
+pytest-mock==3.6.1
