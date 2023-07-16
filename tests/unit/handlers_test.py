@@ -75,7 +75,7 @@ async def test_url_handler(mocker):
 
     # Youtube audio download mock
     youtube_track = YoutubeTrack("sample", "sample", "filepath", "audio/mpeg")
-    download_youtube_audio_mock = Mock()
+    download_youtube_audio_mock = AsyncMock()
     download_youtube_audio_mock.return_value = youtube_track
 
     # Google drive mock
@@ -209,7 +209,7 @@ async def test_url_handler_drive_error(mocker):
 
     # Youtube audio download mock
     youtube_track = YoutubeTrack("sample", "sample", "filepath", "audio/mpeg")
-    download_youtube_audio_mock = Mock()
+    download_youtube_audio_mock = AsyncMock()
     download_youtube_audio_mock.return_value = youtube_track
 
     # Google drive mock
