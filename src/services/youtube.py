@@ -22,7 +22,7 @@ def url_is_youtube_valid(url: str):
     return pattern.search(url)
 
 
-def download_youtube_audio(metadata: Metadata, message: Message) -> YoutubeTrack:
+async def download_youtube_audio(metadata: Metadata, message: Message) -> YoutubeTrack:
     """
     Downloads audio from youtube video link. Alters message sent to show the progress of the download.
     @param metadata: metadata object.
@@ -53,7 +53,7 @@ def download_youtube_audio(metadata: Metadata, message: Message) -> YoutubeTrack
         'progress_hooks': [progress_hook],
         'outtmpl': FILES_DIR + '%(id)s.%(ext)s'
     }
-
+    
     try:
         with YoutubeDL(ydl_opts) as ydl:
             

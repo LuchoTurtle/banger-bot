@@ -72,7 +72,7 @@ async def url_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                                            parse_mode=ParseMode.MARKDOWN)
 
             try:
-                track = download_youtube_audio(message_metadata, msg)
+                track = await download_youtube_audio(message_metadata, msg)
             except YoutubeAudioDownloadFail:
                 msg.edit_text("There was a problem downloading the audio from this Youtube link ❌.",
                               parse_mode=ParseMode.MARKDOWN)
